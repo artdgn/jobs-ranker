@@ -1,8 +1,8 @@
 import pandas as pd
 import re
 
-filename = 'temp.csv'
-df = pd.read_csv('crawler/crawler/spiders/' + filename)
+filename = 'jora-5.csv'
+df = pd.read_csv(filename)
 
 df['description'] = df['description'].str.lower()
 

@@ -32,5 +32,5 @@ class ToScrapeCSSSpider(scrapy.Spider):
 
     def parse_job_page(self, response):
         item = response.meta
-        item['description'] = '\n'.join(response.css('.summary p::text').extract())
+        item['description'] = '\n'.join(response.css('.summary ::text').extract())
         yield item
