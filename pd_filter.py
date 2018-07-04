@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-filename = 'jora-ml-4.csv'
+filename = 'temp.csv'
 df = pd.read_csv('crawler/crawler/spiders/' + filename)
 
 df['description'] = df['description'].str.lower()
