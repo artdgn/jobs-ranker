@@ -5,9 +5,16 @@ filename = 'jora-5.csv'
 
 
 class JobsList:
-    neg_keywords = ['financ', 'banking', 'gambl', 'insurance', 'fintech', 'consult',
-                 'marketi', 'professional services', '.net', 'react', 'frontend', ]
-    pos_keywords = ['senior', 'deep learning', 'nlp', 'cnn', 'machine learning', ' ml ']
+    desc_neg_keywords = ['financ', 'banking', 'gambl', 'insurance', 'fintech', 'consult',
+                         'marketi', 'professional services', '.net', 'react', 'frontend',
+                         'scala', 'spark', 'government', 'citizen']
+    desc_pos_keywords = ['senior', 'deep learning', 'nlp', 'cnn', 'machine learning', ' ml ']
+
+    title_neg_keywords = ['consult', '.net', 'react', 'frontend', 'javascript',
+                          'devops', 'sales', 'analyst', 'data engineer', 'business',
+                          'fullstack', 'architect', 'scala', 'spark']
+    title_pos_keywords = ['senior', 'machine learning', 'ml', 'data']
+
 
     def __init__(self):
         self._pandas_console_options()
@@ -62,11 +69,17 @@ class JobsList:
 
         def keyword_density_func(keyword_list, group_name):
             regex = named_regex(keyword_list, group_name)
-            return lambda s: len(re.findall(regex, s)) / len(s)
+            return lambda s: len(re.findall(regex, s.lower())) / len(s)
 
-        self.df['neg_count'] = self.df.description.apply(keyword_density_func(self.neg_keywords, 'neg'))
-        self.df['pos_count'] = self.df.description.apply(keyword_density_func(self.pos_keywords, 'pos'))
-        self.df['comb_score'] = 1/self.df.neg_count.rank() - 1/self.df.pos_count.rank()
+        self.df['desc_neg_count'] = self.df.description.apply(keyword_density_func(self.desc_neg_keywords, 'desc_neg'))
+        self.df['desc_pos_count'] = self.df.description.apply(keyword_density_func(self.desc_pos_keywords, 'desc_pos'))
+
+        self.df['title_neg_count'] = self.df.title.apply(keyword_density_func(self.title_neg_keywords, 'title_neg'))
+        self.df['title_pos_count'] = self.df.title.apply(keyword_density_func(self.title_pos_keywords, 'title_pos'))
+
+        self.df['comb_score'] = \
+            1 / self.df.desc_pos_count.rank(ascending=False) - 1 / self.df.desc_neg_count.rank(ascending=False) + \
+            1 / self.df.title_pos_count.rank(ascending=False) - 1 / self.df.title_neg_count.rank(ascending=False)
 
         self.df.sort_values('comb_score', ascending=False, inplace=True)
 
