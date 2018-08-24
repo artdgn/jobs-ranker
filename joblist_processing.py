@@ -1,18 +1,18 @@
 import pandas as pd
 import re
 
-filename = 'jora-5.csv'
-
 
 class JobsList:
     desc_neg_keywords = ['financ', 'banking', 'gambl', 'insurance', 'fintech', 'consult',
                          'marketi', 'professional services', '.net', 'react', 'frontend',
-                         'scala', 'spark', 'government', 'citizen']
-    desc_pos_keywords = ['senior', 'deep learning', 'nlp', 'cnn', 'machine learning', ' ml ']
+                         'scala', 'spark', 'government', 'citizen', 'tableau', 'money',
+                         'insight', 'java', 'advert']
+    desc_pos_keywords = ['senior', 'deep learning', 'nlp', 'cnn', 'machine learning', ' ml ',
+                         'recognition', 'neural', 'keras', 'tensorflow', 'ruby']
 
     title_neg_keywords = ['consult', '.net', 'react', 'frontend', 'javascript',
                           'devops', 'sales', 'analyst', 'data engineer', 'business',
-                          'fullstack', 'architect', 'scala', 'spark']
+                          'fullstack', 'architect', 'scala', 'spark', 'ruby']
     title_pos_keywords = ['senior', 'machine learning', 'ml', 'data']
 
 
