@@ -9,15 +9,21 @@ from joblist.labeled_jobs import LabeledJobs
 
 class JobsListLabeler:
 
-    def __init__(self, scraped, keywords, labeled):
+    keyword_score_col = 'keyword_score'
+    model_score_col = 'model_score'
+
+    def __init__(self, scraped, keywords, labeled, older_scraped=()):
         self.scraped_source = scraped
         self.keywords_source = keywords
         self.labeled_source = labeled
+        self.older_scraped = older_scraped
+        self.regressor = None
+        self.model_score = None
         self._pandas_console_options()
         self._load_and_process_data()
 
     def _load_and_process_data(self):
-        self._read_scraped(self.scraped_source)
+        self._read_scraped()
         self._read_keywords()
         self._read_labeled()
         self._process_df()
@@ -36,12 +42,15 @@ class JobsListLabeler:
     def _read_labeled(self):
         self.labels_store = LabeledJobs(self.labeled_source)
 
-    def _read_scraped(self, filename):
-        self.df_jobs = pd.read_csv(filename)
-        drop_cols = [col for col in self.df_jobs.columns if col.startswith('download_')] + \
+    def _read_scrapy_file(self, filename):
+        df = pd.read_csv(filename)
+        drop_cols = [col for col in df.columns if col.startswith('download_')] + \
                     ['depth']
-        self.df_jobs.drop(drop_cols, axis=1, inplace=True)
-        return self
+        df.drop(drop_cols, axis=1, inplace=True)
+        return df
+
+    def _read_scraped(self):
+        self.df_jobs = self._read_scrapy_file(self.scraped_source)
 
     def label_jobs(self):
         labeling = True
@@ -92,7 +101,14 @@ class JobsListLabeler:
     def _process_df(self):
         self._extract_numeric_fields()
         self._add_keyword_score()
-        return self
+        self._add_model_score()
+        self._sort_jobs()
+
+    def _sort_jobs(self):
+        sort_col = self.keyword_score_col
+        if self.model_score is not None and self.model_score > 0.2:
+            sort_col = self.model_score_col
+        self.df_jobs.sort_values(sort_col, ascending=False, inplace=True)
 
     def _add_keyword_score(self):
 
@@ -111,40 +127,72 @@ class JobsListLabeler:
             self.df_jobs[kind + '_count'] = \
                 self.df_jobs.title.apply(keyword_density_func(self.keywords[kind], kind))
 
-        self.df_jobs['comb_score'] = \
+        self.df_jobs[self.keyword_score_col] = \
             1 / self.df_jobs.desc_pos_count.rank(ascending=False) - \
             1 / self.df_jobs.desc_neg_count.rank(ascending=False) + \
             1 / self.df_jobs.title_pos_count.rank(ascending=False) - \
             1 / self.df_jobs.title_neg_count.rank(ascending=False)
 
-        self.df_jobs.sort_values('comb_score', ascending=False, inplace=True)
+    def _add_model_score(self):
+        files = [self.scraped_source] + list(self.older_scraped)
 
-#########
-'''
-def reg_test(df, x_col, y_col, result_col):
+        df_jobs_all = pd.concat(
+            [self._read_scrapy_file(file) for file in files], axis=0).\
+            drop_duplicates()
+
+        df_join = self.labels_store.df.set_index('url').\
+            join(df_jobs_all.set_index('url'), how='left')
+
+        df_join['target'] = df_join['label'].str.contains('y').astype(int)
+
+        feature_col = 'description'
+
+        df_join.dropna(subset=[feature_col], inplace=True)
+
+        self.regressor, self.model_score = reg_test(df_join, x_col=feature_col, y_col='target')
+
+        self.df_jobs[self.model_score_col] = self.regressor.predict(self.df_jobs['description'])
+
+
+def reg_test(df, x_col, y_col):
 
     from sklearn.ensemble import RandomForestRegressor
-    from sklearn.linear_model import Lasso
     from sklearn.metrics import r2_score
     from sklearn.model_selection import train_test_split
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.pipeline import Pipeline
 
-    df_reg = df[~df[y_col].isnull()][[x_col, y_col]].copy()
-    # fit for eval
-    train, test = train_test_split(df_reg, test_size=0.3)
-    reg = Pipeline([
-        ('tfidf', TfidfVectorizer(ngram_range=(1,2), min_df=2, max_features=None)),
-        # ('regressor', Lasso())])
-        ('regressor', RandomForestRegressor())])
-    reg.fit(train[x_col], train[y_col])
-    # score
-    print(r2_score(test[y_col], reg.predict(test[x_col])))
-    # refit
-    reg.fit(df_reg[x_col], df_reg[y_col])
-    # predict
-    df[result_col] = reg.predict(df[x_col])
-    return df
+    x, y = df[x_col].values, df[y_col].values
 
-df_guess = reg_test(df_post, x_col='title', y_col='salary_high', result_col='salary_guess')
-'''
+    reg = RandomForestRegressor(n_estimators=50, max_features="sqrt", oob_score=True, n_jobs=1)
+
+    if isinstance(x.ravel()[0], str):
+        pipe = Pipeline([
+            ('tfidf', TfidfVectorizer(ngram_range=(1,3), min_df=3, stop_words='english')),
+            ('regressor', reg)])
+
+    elif len(x.shape) == 1:
+        pipe = reg
+        x = x.reshape(-1, 1)
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3)
+
+    # eval
+    pipe.fit(x_train, y_train)
+
+    # score
+    r2_test = r2_score(y_test, pipe.predict(x_test))
+    # oob_score = r2_score(y_train, reg.oob_prediction_)
+    print('r2 test:', r2_test)
+    # print('r2 oob:', oob_score)
+    print('oob score train:', reg.oob_score_)
+
+    # refit
+    pipe.fit(x, y)
+    print('oob score all:', reg.oob_score_)
+    model_score = reg.oob_score_
+
+    # predict
+    # df[result_col] = reg.predict(x)
+    return pipe, model_score
+
