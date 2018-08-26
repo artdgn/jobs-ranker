@@ -10,8 +10,8 @@ class ToScrapeCSSSpider(scrapy.Spider):
 
     def parse(self, response):
         for job in response.css('#jobresults').css('.jwrap'):
-            # rel_url = job.css(".jobtitle").css('a::attr(href)').extract_first()
-            rel_url = job.css(".jmore").css('a::attr(href)').extract_first()
+            rel_url = job.css(".jobtitle").css('a::attr(href)').extract_first()
+            # rel_url = job.css(".jmore").css('a::attr(href)').extract_first()
             rel_url = rel_url.split('?')[0] if rel_url else None
             full_url = (self.base_url + rel_url) if rel_url else None
             item = {
