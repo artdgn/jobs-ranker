@@ -3,10 +3,8 @@ forked from http://quotes.toscrape.com ([github repo](https://github.com/scrapin
 
 #### Running
 
-    $ scrapy crawl toscrape-css -o jora-5.csv -s JOBDIR=crawls/jora-5
+    scrape_and_label.py
 
 
 #### ideas
-label relevance, tfidf on title
-salary prediction
-ranking based on keywords
+deploy in jupyter notebook on the cloud (storage in S3)

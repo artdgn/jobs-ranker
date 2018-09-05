@@ -40,7 +40,7 @@ class JobsListLabeler:
                 self.keywords = json.loads(keywords)
 
     def _read_labeled(self):
-        self.labels_store = LabeledJobs(self.labeled_source)
+        self.labels_dao = LabeledJobs(self.labeled_source)
 
     def _read_scrapy_file(self, filename):
         df = pd.read_csv(filename)
@@ -52,20 +52,22 @@ class JobsListLabeler:
     def _read_scraped(self):
         self.df_jobs = self._read_scrapy_file(self.scraped_source)
 
-    def label_jobs(self):
+    def label_jobs(self, recalc_everytime=True):
         labeling = True
-        prompt = 'y/n/label/stop/refresh?'
+        prompt = 'y/n/label/stop/recalc?'
         while labeling:
             for ind, row in self.df_jobs.drop('description', axis=1).iterrows():
-                if not self.labels_store.labeled(row.url):
+                if not self.labels_dao.labeled(row.url):
                     resp = input(str(row) + '\n' + prompt)
                     if resp == 'stop':
                         labeling = False
                         break
-                    if resp == 'refresh':
+                    if resp == 'recalc':
                         self._load_and_process_data()
                         break
-                    self.labels_store.label(row.url, resp)
+                    self.labels_dao.label(row.url, resp)
+                    if recalc_everytime:
+                        self._load_and_process_data()
 
     @staticmethod
     def _pandas_console_options():
@@ -140,7 +142,7 @@ class JobsListLabeler:
             [self._read_scrapy_file(file) for file in files], axis=0).\
             drop_duplicates()
 
-        df_join = self.labels_store.df.set_index('url').\
+        df_join = self.labels_dao.df.set_index('url').\
             join(df_jobs_all.set_index('url'), how='left')
 
         df_join['target'] = df_join['label'].str.contains('y').astype(int)
