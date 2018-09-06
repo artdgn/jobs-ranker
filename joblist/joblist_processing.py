@@ -147,50 +147,55 @@ class JobsListLabeler:
 
         df_join['target'] = df_join['label'].str.contains('y').astype(int)
 
-        feature_col = 'description'
+        # feature_cols = ['description']
+        feature_cols = ['description', 'title']
 
-        df_join.dropna(subset=[feature_col], inplace=True)
+        df_join.dropna(subset=feature_cols, inplace=True)
 
-        self.regressor, self.model_score = reg_test(df_join, x_col=feature_col, y_col='target')
+        self.regressor, self.model_score = reg_test(df_join, x_cols=feature_cols, y_col='target')
 
-        self.df_jobs[self.model_score_col] = self.regressor.predict(self.df_jobs['description'])
+        self.df_jobs[self.model_score_col] = self.regressor.predict(self.df_jobs[feature_cols])
 
 
-def reg_test(df, x_col, y_col):
+def reg_test(df, x_cols, y_col, eval_on_test=False):
 
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.metrics import r2_score
     from sklearn.model_selection import train_test_split
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.pipeline import Pipeline
+    from sklearn.compose import ColumnTransformer
+    from sklearn.preprocessing import FunctionTransformer
 
-    x, y = df[x_col].values, df[y_col].values
 
-    reg = RandomForestRegressor(n_estimators=50, max_features="sqrt", oob_score=True, n_jobs=1)
+    x, y = df[x_cols], df[y_col].values
 
-    if isinstance(x.ravel()[0], str):
-        pipe = Pipeline([
-            ('tfidf', TfidfVectorizer(ngram_range=(1,3), min_df=3, stop_words='english')),
-            ('regressor', reg)])
+    reg = RandomForestRegressor(n_estimators=50, oob_score=True, n_jobs=-1)
 
-    elif len(x.shape) == 1:
-        pipe = reg
-        x = x.reshape(-1, 1)
+    tfidf = Pipeline([
+        ('extract_docs', FunctionTransformer(lambda x: x.values[:,0], validate=False)),
+        ('tfidf', TfidfVectorizer(ngram_range=(1,3), min_df=3, stop_words='english'))])
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3)
+    pipe = Pipeline([
+        ('transformer', ColumnTransformer(transformers=[('tfidf', tfidf, x_cols)])),
+        ('regressor', reg)])
 
-    # eval
-    pipe.fit(x_train, y_train)
-
-    # score
-    r2_test = r2_score(y_test, pipe.predict(x_test))
-    # oob_score = r2_score(y_train, reg.oob_prediction_)
-    print('r2 test:', r2_test)
-    # print('r2 oob:', oob_score)
-    print('oob score train:', reg.oob_score_)
+    if eval_on_test:  # not really important with RF (because of OOB)
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3)
+        pipe.fit(x_train, y_train)
+        # score
+        r2_test = r2_score(y_test, pipe.predict(x_test))
+        print('r2 test:', r2_test)
+        print('oob score train:', reg.oob_score_)
 
     # refit
     pipe.fit(x, y)
+
+    # report
+    describe = lambda vec, name: pd.Series(vec).describe().to_frame(name).transpose()
+    print('Oob scores:\n, ',
+          pd.concat([describe(reg.oob_prediction_[y == 1], 'positives'),
+                     describe(reg.oob_prediction_[y == 0], 'negatives')]))
     print('oob score all:', reg.oob_score_)
     model_score = reg.oob_score_
 

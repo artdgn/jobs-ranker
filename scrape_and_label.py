@@ -18,8 +18,9 @@ log_file = 'log-%s.log' % datetime.datetime.now().isoformat()
 crawl_name = 'jora-%s' % datetime.datetime.now().date().isoformat()
 crawl_output = os.path.join(crawls_dir, '%s.csv' % crawl_name)
 
+scrape = False
 
-def crawl():
+def crawl_proc():
     settings = get_project_settings()
     settings.set('FEED_FORMAT', 'csv', priority='cmdline')
     settings.set('FEED_URI', crawl_output, priority='cmdline')
@@ -31,15 +32,16 @@ def crawl():
     process.crawl(ToScrapeCSSSpider)
     process.start()
 
-Process(target=crawl).start()
+if scrape:
+    Process(target=crawl_proc).start()
 
-while not os.path.exists(crawl_output):
-    print('waiting for output..')
-    time.sleep(2)
+    while not os.path.exists(crawl_output):
+        print('waiting for output..')
+        time.sleep(2)
+
 
 crawls = [os.path.join(crawls_dir, f) for f in os.listdir(crawls_dir)]
 crawls.remove(crawl_output)
-
 
 jobs = JobsListLabeler(
     scraped=crawl_output,
