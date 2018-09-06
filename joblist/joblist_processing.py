@@ -1,5 +1,6 @@
 import json
 import os
+from itertools import product
 
 import pandas as pd
 import re
@@ -19,6 +20,7 @@ class JobsListLabeler:
         self.older_scraped = older_scraped
         self.regressor = None
         self.model_score = None
+        self.intermidiate_score_cols = [self.keyword_score_col]
         self._pandas_console_options()
         self._load_and_process_data()
 
@@ -54,7 +56,7 @@ class JobsListLabeler:
 
     def label_jobs(self, recalc_everytime=True):
         labeling = True
-        prompt = 'y/n/label/stop/recalc?'
+        prompt = 'y/n/float/stop/recalc?'
         while labeling:
             for ind, row in self.df_jobs.drop('description', axis=1).iterrows():
                 if not self.labels_dao.labeled(row.url):
@@ -121,17 +123,16 @@ class JobsListLabeler:
             regex = named_regex(keyword_list, group_name)
             return lambda s: len(re.findall(regex, s.lower())) / len(s)
 
-        for kind in ['desc_neg', 'desc_pos']:
-            self.df_jobs[kind + '_count'] = \
-                self.df_jobs.description.apply(keyword_density_func(self.keywords[kind], kind))
-
-        for kind in ['title_neg', 'title_pos']:
-            self.df_jobs[kind + '_count'] = \
-                self.df_jobs.title.apply(keyword_density_func(self.keywords[kind], kind))
+        for source, weight in product(['description', 'title'], ['pos', 'neg']):
+            kind = '%s_%s' % (source, weight)
+            col = kind + '_count'
+            self.df_jobs[col] = \
+                self.df_jobs[source].apply(keyword_density_func(self.keywords[kind], kind))
+            self.intermidiate_score_cols.append(col)
 
         self.df_jobs[self.keyword_score_col] = \
-            1 / self.df_jobs.desc_pos_count.rank(ascending=False) - \
-            1 / self.df_jobs.desc_neg_count.rank(ascending=False) + \
+            1 / self.df_jobs.description_pos_count.rank(ascending=False) - \
+            1 / self.df_jobs.description_neg_count.rank(ascending=False) + \
             1 / self.df_jobs.title_pos_count.rank(ascending=False) - \
             1 / self.df_jobs.title_neg_count.rank(ascending=False)
 
@@ -145,7 +146,10 @@ class JobsListLabeler:
         df_join = self.labels_dao.df.set_index('url').\
             join(df_jobs_all.set_index('url'), how='left')
 
-        df_join['target'] = df_join['label'].str.contains('y').astype(int)
+        df_join['target'] = df_join['label'].\
+            replace('y','1.0').\
+            replace('n', '0.0').\
+            astype(float)
 
         # feature_cols = ['description']
         feature_cols = ['description', 'title']
