@@ -6,12 +6,14 @@ import pandas as pd
 import re
 
 from joblist.labeled_jobs import LabeledJobs
+from modeling.regression import train_regressor
 
 
 class JobsListLabeler:
 
     keyword_score_col = 'keyword_score'
     model_score_col = 'model_score'
+    salary_guess_col = 'salary_guess'
 
     def __init__(self, scraped, keywords, labeled, older_scraped=()):
         self.scraped_source = scraped
@@ -20,7 +22,9 @@ class JobsListLabeler:
         self.older_scraped = older_scraped
         self.regressor = None
         self.model_score = None
-        self.intermidiate_score_cols = [self.keyword_score_col]
+        self.regressor_salary = None
+        self.reg_sal_model_score = None
+        self.intermidiate_score_cols = []
         self._pandas_console_options()
         self._load_and_process_data()
 
@@ -54,12 +58,22 @@ class JobsListLabeler:
     def _read_scraped(self):
         self.df_jobs = self._read_scrapy_file(self.scraped_source)
 
+    def _read_all_scraped(self):
+        files = [self.scraped_source] + list(self.older_scraped)
+
+        df_jobs = pd.concat(
+            [self._read_scrapy_file(file) for file in files], axis=0). \
+            drop_duplicates()
+
+        return df_jobs
+
     def label_jobs(self, recalc_everytime=True):
         labeling = True
         prompt = 'y/n/float/stop/recalc?'
         while labeling:
             for ind, row in self.df_jobs.drop('description', axis=1).iterrows():
                 if not self.labels_dao.labeled(row.url):
+                    row = row.drop(self.intermidiate_score_cols).dropna()
                     resp = input(str(row) + '\n' + prompt)
                     if resp == 'stop':
                         labeling = False
@@ -98,23 +112,26 @@ class JobsListLabeler:
             row['days_age'] = int(int(date_nums[0]) * date_mult)
         return row
 
-    def _extract_numeric_fields(self):
-        self.df_jobs = self.df_jobs.apply(self._extract_numeric_fields_on_row, axis=1)
-        self.df_jobs.drop(['salary', 'date'], axis=1, inplace=True)
+    def _extract_numeric_fields(self, df):
+        df = df.apply(self._extract_numeric_fields_on_row, axis=1)
+        df.drop(['salary', 'date'], axis=1, inplace=True)
+        return df
 
     def _process_df(self):
-        self._extract_numeric_fields()
-        self._add_keyword_score()
-        self._add_model_score()
-        self._sort_jobs()
+        self.df_jobs = self._extract_numeric_fields(self.df_jobs)
+        self.df_jobs = self._add_keyword_score(self.df_jobs)
+        self.df_jobs = self._add_salary_guess(self.df_jobs)
+        self.df_jobs = self._add_model_score(self.df_jobs)
+        self.df_jobs = self._sort_jobs(self.df_jobs)
 
-    def _sort_jobs(self):
+    def _sort_jobs(self, df):
         sort_col = self.keyword_score_col
         if self.model_score is not None and self.model_score > 0.2:
             sort_col = self.model_score_col
-        self.df_jobs.sort_values(sort_col, ascending=False, inplace=True)
+        df.sort_values(sort_col, ascending=False, inplace=True)
+        return df
 
-    def _add_keyword_score(self):
+    def _add_keyword_score(self, df):
 
         def named_regex(word_list, name):
             return '(?P<%s>' % name + '|'.join(word_list) + ')'
@@ -126,84 +143,73 @@ class JobsListLabeler:
         for source, weight in product(['description', 'title'], ['pos', 'neg']):
             kind = '%s_%s' % (source, weight)
             col = kind + '_count'
-            self.df_jobs[col] = \
-                self.df_jobs[source].apply(keyword_density_func(self.keywords[kind], kind))
-            self.intermidiate_score_cols.append(col)
+            df[col] = df[source].apply(keyword_density_func(self.keywords[kind], kind))
+            if col not in self.intermidiate_score_cols:
+                self.intermidiate_score_cols.append(col)
 
-        self.df_jobs[self.keyword_score_col] = \
-            1 / self.df_jobs.description_pos_count.rank(ascending=False) - \
-            1 / self.df_jobs.description_neg_count.rank(ascending=False) + \
-            1 / self.df_jobs.title_pos_count.rank(ascending=False) - \
-            1 / self.df_jobs.title_neg_count.rank(ascending=False)
+        df[self.keyword_score_col] = \
+            1 / df.description_pos_count.rank(ascending=False) - \
+            1 / df.description_neg_count.rank(ascending=False) + \
+            1 / df.title_pos_count.rank(ascending=False) - \
+            1 / df.title_neg_count.rank(ascending=False)
+        return df
 
-    def _add_model_score(self):
-        files = [self.scraped_source] + list(self.older_scraped)
+    def _add_salary_guess(self, df, refit=True):
 
-        df_jobs_all = pd.concat(
-            [self._read_scrapy_file(file) for file in files], axis=0).\
-            drop_duplicates()
+        if self.regressor_salary is None or refit:
 
-        df_join = self.labels_dao.df.set_index('url').\
-            join(df_jobs_all.set_index('url'), how='left')
+            df_jobs = self._read_all_scraped()
+            df_join = self._extract_numeric_fields(df_jobs)
 
-        df_join['target'] = df_join['label'].\
-            replace('y','1.0').\
-            replace('n', '0.0').\
-            astype(float)
+            target_col = 'salary_high'
 
-        # feature_cols = ['description']
-        feature_cols = ['description', 'title']
+            # cat_cols = ['description']
+            cat_cols = ['description', 'title']
+            df_join.dropna(subset=cat_cols + [target_col], inplace=True)
 
-        df_join.dropna(subset=feature_cols, inplace=True)
+            self.regressor_salary, self.reg_sal_model_score = \
+                train_regressor(df_join,
+                                cat_cols=cat_cols, num_cols=[],
+                                y_col=target_col, print_prefix='salary: ')
 
-        self.regressor, self.model_score = reg_test(df_join, x_cols=feature_cols, y_col='target')
+        df[self.salary_guess_col] = self.regressor_salary.predict(df)
 
-        self.df_jobs[self.model_score_col] = self.regressor.predict(self.df_jobs[feature_cols])
+        return df
 
+    def _add_model_score(self, df, refit=True):
 
-def reg_test(df, x_cols, y_col, eval_on_test=False):
+        if self.regressor is None or refit:
 
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.metrics import r2_score
-    from sklearn.model_selection import train_test_split
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.pipeline import Pipeline
-    from sklearn.compose import ColumnTransformer
-    from sklearn.preprocessing import FunctionTransformer
+            df_jobs_all = self._read_all_scraped()
 
+            df_join = self.labels_dao.df.set_index('url').\
+                join(df_jobs_all.set_index('url'), how='left')
 
-    x, y = df[x_cols], df[y_col].values
+            df_join['target'] = df_join['label'].\
+                replace('y', '1.0').\
+                replace('n', '0.0').\
+                astype(float)
 
-    reg = RandomForestRegressor(n_estimators=50, oob_score=True, n_jobs=-1)
+            # cat_cols = ['description']
+            cat_cols = ['description', 'title']
 
-    tfidf = Pipeline([
-        ('extract_docs', FunctionTransformer(lambda x: x.values[:,0], validate=False)),
-        ('tfidf', TfidfVectorizer(ngram_range=(1,3), min_df=3, stop_words='english'))])
+            df_join.dropna(subset=cat_cols, inplace=True)
 
-    pipe = Pipeline([
-        ('transformer', ColumnTransformer(transformers=[('tfidf', tfidf, x_cols)])),
-        ('regressor', reg)])
+            df_join = self._extract_numeric_fields(df_join)
+            df_join = self._add_keyword_score(df_join)
+            df_join = self._add_salary_guess(df_join, refit=False)
 
-    if eval_on_test:  # not really important with RF (because of OOB)
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3)
-        pipe.fit(x_train, y_train)
-        # score
-        r2_test = r2_score(y_test, pipe.predict(x_test))
-        print('r2 test:', r2_test)
-        print('oob score train:', reg.oob_score_)
+            num_cols = self.intermidiate_score_cols + [self.keyword_score_col, self.salary_guess_col]
+            # num_cols = self.intermidiate_score_cols + [self.keyword_score_col]
+            # num_cols = []
 
-    # refit
-    pipe.fit(x, y)
+            self.regressor, self.model_score = \
+                train_regressor(df_join,
+                                cat_cols=cat_cols, num_cols=num_cols,
+                                y_col='target', print_prefix='label: ')
 
-    # report
-    describe = lambda vec, name: pd.Series(vec).describe().to_frame(name).transpose()
-    print('Oob scores:\n, ',
-          pd.concat([describe(reg.oob_prediction_[y == 1], 'positives'),
-                     describe(reg.oob_prediction_[y == 0], 'negatives')]))
-    print('oob score all:', reg.oob_score_)
-    model_score = reg.oob_score_
+        df[self.model_score_col] = self.regressor.predict(df)
 
-    # predict
-    # df[result_col] = reg.predict(x)
-    return pipe, model_score
+        return df
+
 

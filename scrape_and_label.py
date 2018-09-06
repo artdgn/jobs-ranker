@@ -40,20 +40,13 @@ if scrape:
         time.sleep(2)
 
 
-crawls = [os.path.join(crawls_dir, f) for f in os.listdir(crawls_dir)]
-crawls.remove(crawl_output)
+crawls = [os.path.join(crawls_dir, f) for f in sorted(os.listdir(crawls_dir))]
 
 jobs = JobsListLabeler(
-    scraped=crawl_output,
+    scraped=crawls.pop(),
     keywords=keywords_json,
     labeled=labeled_jobs_csv,
     older_scraped=crawls)
 
 jobs.label_jobs()
-
-
-
-
-
-
 
