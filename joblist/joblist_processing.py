@@ -63,7 +63,7 @@ class JobsListLabeler:
 
         df_jobs = pd.concat(
             [self._read_scrapy_file(file) for file in files], axis=0). \
-            drop_duplicates()
+            drop_duplicates(subset=['url'])
 
         return df_jobs
 
@@ -154,30 +154,33 @@ class JobsListLabeler:
             1 / df.title_neg_count.rank(ascending=False)
         return df
 
-    def _add_salary_guess(self, df, refit=True):
+    def _add_salary_guess(self, df, refit=False):
 
         if self.regressor_salary is None or refit:
 
             df_jobs = self._read_all_scraped()
-            df_join = self._extract_numeric_fields(df_jobs)
+            df_jobs = self._extract_numeric_fields(df_jobs)
+            df_jobs = self._add_keyword_score(df_jobs)
 
             target_col = 'salary_high'
 
             # cat_cols = ['description']
             cat_cols = ['description', 'title']
-            df_join.dropna(subset=cat_cols + [target_col], inplace=True)
-
+            df_jobs.dropna(subset=cat_cols + [target_col], inplace=True)
+            num_cols = [self.keyword_score_col]
             self.regressor_salary, self.reg_sal_model_score = \
                 RegTrainer(print_prefix='salary: ').\
-                    train_regressor(df_join,
-                                cat_cols=cat_cols, num_cols=[],
-                                y_col=target_col)
+                    train_regressor(df_jobs,
+                                    cat_cols=cat_cols,
+                                    num_cols=num_cols,
+                                    y_col=target_col,
+                                    select_cols=True)
 
         df[self.salary_guess_col] = self.regressor_salary.predict(df)
 
         return df
 
-    def _add_model_score(self, df, refit=True):
+    def _add_model_score(self, df, refit=True, skipped_as_negatives=True):
 
         if self.regressor is None or refit:
 
@@ -191,6 +194,14 @@ class JobsListLabeler:
                 replace('n', '0.0').\
                 astype(float)
 
+            if skipped_as_negatives:
+                df_past_skipped = df_jobs_all.loc[
+                                  ~df_jobs_all.url.isin(
+                                      df_join.reset_index()['url'].tolist() +
+                                      self.df_jobs['url'].tolist()), :].copy()
+                df_past_skipped.loc[:, 'target'] = 0.0
+                df_join = df_join.append(df_past_skipped, sort=True)
+
             # cat_cols = ['description']
             cat_cols = ['description', 'title']
 
@@ -198,7 +209,7 @@ class JobsListLabeler:
 
             df_join = self._extract_numeric_fields(df_join)
             df_join = self._add_keyword_score(df_join)
-            df_join = self._add_salary_guess(df_join, refit=False)
+            df_join = self._add_salary_guess(df_join)
 
             num_cols = self.intermidiate_score_cols + [self.keyword_score_col, self.salary_guess_col]
             # num_cols = self.intermidiate_score_cols + [self.keyword_score_col]
@@ -207,8 +218,10 @@ class JobsListLabeler:
             self.regressor, self.model_score = \
                 RegTrainer(print_prefix='label: ').\
                     train_regressor(df_join,
-                                cat_cols=cat_cols, num_cols=num_cols,
-                                y_col='target')
+                                    cat_cols=cat_cols,
+                                    num_cols=num_cols,
+                                    y_col='target',
+                                    select_cols=False)
 
         df[self.model_score_col] = self.regressor.predict(df)
 

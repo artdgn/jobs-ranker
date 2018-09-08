@@ -4,7 +4,7 @@ import pandas as pd
 from scipy.stats import spearmanr
 
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import r2_score, roc_auc_score
+from sklearn.metrics import r2_score, roc_auc_score, average_precision_score
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -27,7 +27,7 @@ class RegTrainer():
 
         pipe, reg = build_RF_pipiline(cat_cols, num_cols)
 
-        metric = 'auc' if is_binary_target(y) else 'r2'
+        metric = 'apr' if is_binary_target(y) else 'r2'
 
         if select_cols:
             pipe, reg = self.exhaustive_column_selection(
@@ -46,22 +46,25 @@ class RegTrainer():
         y_pred = reg.oob_prediction_
         metrics = score_metrics(y, y_pred)
         describe = lambda vec, name: pd.Series(vec).describe().to_frame(name).transpose()
-        if is_binary_target(y) in metrics:
+        if is_binary_target(y):
             print(self.print_prefix, 'oob scores:\n',
                   pd.concat([describe(reg.oob_prediction_[y == 1], 'positives'),
                              describe(reg.oob_prediction_[y == 0], 'negatives')]))
-        print(self.print_prefix, pd.Series(metrics).transpose())
+        print(pd.Series(metrics).to_frame(self.print_prefix).transpose())
         return metrics
 
     def exhaustive_column_selection(self, cat_cols, num_cols, x, y, metric):
         res = []
+
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=self.test_ratio)
+
         for cols in all_subsets(cat_cols + num_cols):
 
             pipe, reg = build_RF_pipiline([col for col in cat_cols if col in cols],
                                           [col for col in num_cols if col in cols])
 
             test_metrics = score_regressor_on_test(
-                pipe, x=x[list(cols)], y=y, ratio=self.test_ratio)
+                pipe, x_train[list(cols)], x_test[list(cols)], y_train, y_test)
 
             res.append((test_metrics[metric], cols))
 
@@ -102,9 +105,7 @@ def build_RF_pipiline(cat_cols, num_cols):
 
     return pipe, reg
 
-
-def score_regressor_on_test(pipe, x, y, ratio=0.3):
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=ratio)
+def score_regressor_on_test(pipe, x_train, x_test, y_train, y_test):
     pipe.fit(x_train, y_train)
     y_pred = pipe.predict(x_test)
     return score_metrics(y_test, y_pred)
@@ -120,4 +121,5 @@ def score_metrics(y_true, y_pred):
         'spearman': spearmanr(y_true, y_pred)[0]}
     if is_binary_target(y_true):
         metrics['auc'] = roc_auc_score(y_true, y_pred)
+        metrics['apr'] = average_precision_score(y_true, y_pred)
     return metrics
