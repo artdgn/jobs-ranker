@@ -6,7 +6,7 @@ import pandas as pd
 import re
 
 from joblist.labeled_jobs import LabeledJobs
-from modeling.regression import train_regressor
+from modeling.regression import RegTrainer
 
 
 class JobsListLabeler:
@@ -168,9 +168,10 @@ class JobsListLabeler:
             df_join.dropna(subset=cat_cols + [target_col], inplace=True)
 
             self.regressor_salary, self.reg_sal_model_score = \
-                train_regressor(df_join,
+                RegTrainer(print_prefix='salary: ').\
+                    train_regressor(df_join,
                                 cat_cols=cat_cols, num_cols=[],
-                                y_col=target_col, print_prefix='salary: ')
+                                y_col=target_col)
 
         df[self.salary_guess_col] = self.regressor_salary.predict(df)
 
@@ -204,9 +205,10 @@ class JobsListLabeler:
             # num_cols = []
 
             self.regressor, self.model_score = \
-                train_regressor(df_join,
+                RegTrainer(print_prefix='label: ').\
+                    train_regressor(df_join,
                                 cat_cols=cat_cols, num_cols=num_cols,
-                                y_col='target', print_prefix='label: ')
+                                y_col='target')
 
         df[self.model_score_col] = self.regressor.predict(df)
 

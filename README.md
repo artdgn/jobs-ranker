@@ -1,4 +1,4 @@
-forked from http://quotes.toscrape.com ([github repo](https://github.com/scrapinghub/spidyquotes)).
+scraping parts forked and adjusted from http://quotes.toscrape.com ([github repo](https://github.com/scrapinghub/spidyquotes)).
 
 
 #### Running
@@ -7,4 +7,7 @@ forked from http://quotes.toscrape.com ([github repo](https://github.com/scrapin
 
 
 #### ideas
-deploy in jupyter notebook on the cloud (storage in S3)
+    feature / column selection
+    web frontend (django)
+    other sites (indeed)
+    deploy in jupyter notebook on the cloud (storage in S3)
