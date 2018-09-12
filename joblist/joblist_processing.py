@@ -174,7 +174,7 @@ class JobsListLabeler:
                                     cat_cols=cat_cols,
                                     num_cols=num_cols,
                                     y_col=target_col,
-                                    select_cols=True)
+                                    select_cols=False)
 
         df[self.salary_guess_col] = self.regressor_salary.predict(df)
 
