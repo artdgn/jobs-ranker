@@ -18,7 +18,7 @@ def start_scraping():
     settings.set('FEED_FORMAT', 'csv', priority='cmdline')
     settings.set('FEED_URI', crawl_output, priority='cmdline')
     settings.set('JOBDIR', './crawler/crawls/%s' % crawl_name, priority='cmdline')
-    settings.set('LOG_FILE', './data/%s' % log_file, priority='cmdline')
+    settings.set('LOG_FILE', './data/logs/%s' % log_file, priority='cmdline')
     # settings.set('LOG_STDOUT', True, priority='cmdline')
 
     process = CrawlerProcess(settings)
