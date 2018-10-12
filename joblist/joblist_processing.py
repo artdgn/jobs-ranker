@@ -6,6 +6,7 @@ import pandas as pd
 import re
 
 from joblist.labeled_jobs import LabeledJobs
+from modeling.edit_distance_similarity import dedup_by_descriptions_similarity
 from modeling.regression import RegTrainer
 
 
@@ -15,11 +16,12 @@ class JobsListLabeler:
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
 
-    def __init__(self, scraped, keywords, labeled, older_scraped=()):
+    def __init__(self, scraped, keywords, labeled, older_scraped=(), dedup_last=True):
         self.scraped_source = scraped
         self.keywords_source = keywords
         self.labeled_source = labeled
         self.older_scraped = older_scraped
+        self.dedup_last = dedup_last
         self.regressor = None
         self.model_score = None
         self.regressor_salary = None
@@ -29,7 +31,8 @@ class JobsListLabeler:
         self._load_and_process_data()
 
     def _load_and_process_data(self):
-        self._read_scraped()
+        self._read_all_scraped()
+        self._read_last_scraped(dedup=self.dedup_last)
         self._read_keywords()
         self._read_labeled()
         self._process_df()
@@ -53,19 +56,28 @@ class JobsListLabeler:
         drop_cols = [col for col in df.columns if col.startswith('download_')] + \
                     ['depth']
         df.drop(drop_cols, axis=1, inplace=True)
+        df['scraped_file'] = filename
         return df
 
-    def _read_scraped(self):
-        self.df_jobs = self._read_scrapy_file(self.scraped_source)
+    def _read_last_scraped(self, dedup=True):
+        if not dedup:
+            self.df_jobs = self._read_scrapy_file(self.scraped_source)
+        else:
+            self.df_jobs = self.df_jobs_all.loc[self.df_jobs_all['scraped_file'] ==
+                                                self.scraped_source, :]
 
     def _read_all_scraped(self):
-        files = [self.scraped_source] + list(self.older_scraped)
+        files = list(self.older_scraped) + [self.scraped_source]
 
         df_jobs = pd.concat(
             [self._read_scrapy_file(file) for file in files], axis=0). \
-            drop_duplicates(subset=['url'])
+            drop_duplicates(subset=['url']).\
+            dropna(subset=['description'])
 
-        return df_jobs
+        keep_inds = dedup_by_descriptions_similarity(
+            df_jobs['description'], keep='first')
+
+        self.df_jobs_all = df_jobs.iloc[keep_inds]
 
     def label_jobs(self, recalc_everytime=True):
         labeling = True
@@ -158,7 +170,7 @@ class JobsListLabeler:
 
         if self.regressor_salary is None or refit:
 
-            df_jobs = self._read_all_scraped()
+            df_jobs = self.df_jobs_all.copy()
             df_jobs = self._extract_numeric_fields(df_jobs)
             df_jobs = self._add_keyword_score(df_jobs)
 
@@ -184,7 +196,7 @@ class JobsListLabeler:
 
         if self.regressor is None or refit:
 
-            df_jobs_all = self._read_all_scraped()
+            df_jobs_all = self.df_jobs_all.copy()
 
             df_join = self.labels_dao.df.set_index('url').\
                 join(df_jobs_all.set_index('url'), how='left')
@@ -226,5 +238,6 @@ class JobsListLabeler:
         df[self.model_score_col] = self.regressor.predict(df)
 
         return df
+
 
 

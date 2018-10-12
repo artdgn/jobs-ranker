@@ -3,7 +3,7 @@ scraping parts forked and adjusted from http://quotes.toscrape.com ([github repo
 
 #### Running
 
-    scrape_and_label.py
+    python scrape_and_label.py --scrape --delay 10 --recalc
 
 
 #### ideas
