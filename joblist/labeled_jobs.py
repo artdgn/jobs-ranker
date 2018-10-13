@@ -39,15 +39,11 @@ class LabeledJobs:
     def __repr__(self):
         return self.df.__repr__()
 
-    def _set_dup_dict(self, ind_dup_dict, urls):
-        self.dup_dict = {urls[i]: urls[sorted([i] + list(dups))]
-                         for i, dups in ind_dup_dict.items()}
+    def dedup(self, dup_dict, keep='first'):
 
-    def dedup(self, dup_dict, all_urls, keep='first'):
+        self.dup_dict = dup_dict
 
-        self._set_dup_dict(ind_dup_dict=dup_dict, urls=all_urls)
-
-        for url in all_urls:
+        for url in self.dup_dict.keys():
             if len(self.dup_dict[url]):
                 dup_urls = self.dup_dict[url]
                 labeled = [self.labeled(u) for u in dup_urls]

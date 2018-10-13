@@ -6,7 +6,7 @@ import pandas as pd
 import re
 
 from joblist.labeled_jobs import LabeledJobs
-from modeling.edit_distance_similarity import dedup_by_descriptions_similarity
+from modeling.descriptions_similarity import dedup_by_descriptions_similarity
 from modeling.regression import RegTrainer
 
 
@@ -16,12 +16,13 @@ class JobsListLabeler:
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
 
-    def __init__(self, scraped, keywords, labeled, older_scraped=(), dedup_new=True, dup_keep='first'):
+    def __init__(self, scraped, keywords, labeled,
+                 older_scraped=(), dedup_new=True, dup_keep='first'):
         self.scraped_source = scraped
         self.keywords_source = keywords
         self.labeled_source = labeled
         self.older_scraped = older_scraped
-        self.dedup_last = dedup_new
+        self.dedup_new = dedup_new
         self.dup_keep = dup_keep
         self.regressor = None
         self.model_score = None
@@ -35,7 +36,7 @@ class JobsListLabeler:
     def _load_and_process_data(self):
         self._read_labeled()
         self._read_all_scraped()
-        self._read_last_scraped(dedup=self.dedup_last)
+        self._read_last_scraped(dedup=self.dedup_new)
         self._read_keywords()
         self._process_df()
 
@@ -68,9 +69,16 @@ class JobsListLabeler:
     def _read_last_scraped(self, dedup=True):
         if not dedup:
             self.df_jobs = self._read_scrapy_file(self.scraped_source)
+            self._add_duplicates_column()
         else:
             self.df_jobs = self.df_jobs_all.loc[self.df_jobs_all['scraped_file'] ==
                                                 self.scraped_source, :]
+
+    def _add_duplicates_column(self):
+        dup_no_self = {k: [u for u in v if u != k] for k, v in self.dup_dict.items()}
+        df_dups = pd.DataFrame({'url': list(dup_no_self.keys()),
+                                'duplicates': list(dup_no_self.values())})
+        self.df_jobs = pd.merge(self.df_jobs, df_dups, on='url', how='left')
 
     def _read_all_scraped(self):
         files = list(self.older_scraped) + [self.scraped_source]
@@ -80,10 +88,14 @@ class JobsListLabeler:
             drop_duplicates(subset=['url']).\
             dropna(subset=['description'])
 
-        keep_inds, self.dup_dict = dedup_by_descriptions_similarity(
+        keep_inds, dup_dict_inds = dedup_by_descriptions_similarity(
             df_jobs['description'], keep=self.dup_keep)
 
-        self.labels_dao.dedup(self.dup_dict, df_jobs['url'].values, keep=self.dup_keep)
+        urls = df_jobs['url'].values
+        self.dup_dict = {urls[i]: urls[sorted([i] + list(dups))]
+                         for i, dups in dup_dict_inds.items()}
+
+        self.labels_dao.dedup(self.dup_dict, keep=self.dup_keep)
 
         self.df_jobs_all = df_jobs.iloc[keep_inds]
 
