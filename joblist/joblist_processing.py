@@ -89,9 +89,10 @@ class JobsListLabeler:
 
     def label_jobs(self, recalc_everytime=True):
         labeling = True
-        prompt = 'y/n/float/stop/recalc?'
+        prompt = 'y / n / float / stop / recalc? : '
+        not_show_cols = ['description', 'scraped_file', 'salary', 'date']
         while labeling:
-            for ind, row in self.df_jobs.drop(['description', 'scraped_file'], axis=1).iterrows():
+            for ind, row in self.df_jobs.drop(not_show_cols, axis=1).iterrows():
                 if not self.labels_dao.labeled(row.url):
                     row = row.drop(self.intermidiate_score_cols).dropna()
                     resp = input(str(row) + '\n' + prompt)
@@ -134,7 +135,7 @@ class JobsListLabeler:
 
     def _extract_numeric_fields(self, df):
         df = df.apply(self._extract_numeric_fields_on_row, axis=1)
-        df.drop(['salary', 'date'], axis=1, inplace=True)
+        # df.drop(['salary', 'date'], axis=1, inplace=True)
         return df
 
     def _process_df(self):
