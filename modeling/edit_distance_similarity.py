@@ -30,10 +30,10 @@ def dedup_by_descriptions_similarity(strings, keep='first'):
 
     dup_i, dup_j = duplicates_by_edit_distance(strings)
 
-    d = defaultdict(set)
+    dup_dict = defaultdict(set)
     for i, j in zip(dup_i, dup_j):
-        d[i].add(j)
-        d[j].add(i)
+        dup_dict[i].add(j)
+        dup_dict[j].add(i)
 
     if keep == 'first':
         take_ind = 0
@@ -44,5 +44,5 @@ def dedup_by_descriptions_similarity(strings, keep='first'):
 
     keep_inds = set()
     for i in range(len(strings)):
-        keep_inds.add(sorted([i] + list(d[i]))[take_ind])
-    return sorted(list(keep_inds))
+        keep_inds.add(sorted([i] + list(dup_dict[i]))[take_ind])
+    return sorted(list(keep_inds)), dup_dict

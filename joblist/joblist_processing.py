@@ -16,25 +16,31 @@ class JobsListLabeler:
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
 
-    def __init__(self, scraped, keywords, labeled, older_scraped=(), dedup_last=True):
+    def __init__(self, scraped, keywords, labeled, older_scraped=(), dedup_new=True, dup_keep='first'):
         self.scraped_source = scraped
         self.keywords_source = keywords
         self.labeled_source = labeled
         self.older_scraped = older_scraped
-        self.dedup_last = dedup_last
+        self.dedup_last = dedup_new
+        self.dup_keep = dup_keep
         self.regressor = None
         self.model_score = None
         self.regressor_salary = None
         self.reg_sal_model_score = None
         self.intermidiate_score_cols = []
+        self.dup_dict = {}
         self._pandas_console_options()
         self._load_and_process_data()
 
     def _load_and_process_data(self):
+        self._read_labeled()
         self._read_all_scraped()
         self._read_last_scraped(dedup=self.dedup_last)
         self._read_keywords()
-        self._read_labeled()
+        self._process_df()
+
+    def _recalc(self):
+        self._read_keywords()
         self._process_df()
 
     def _read_keywords(self):
@@ -74,8 +80,10 @@ class JobsListLabeler:
             drop_duplicates(subset=['url']).\
             dropna(subset=['description'])
 
-        keep_inds = dedup_by_descriptions_similarity(
-            df_jobs['description'], keep='first')
+        keep_inds, self.dup_dict = dedup_by_descriptions_similarity(
+            df_jobs['description'], keep=self.dup_keep)
+
+        self.labels_dao.dedup(self.dup_dict, df_jobs['url'].values, keep=self.dup_keep)
 
         self.df_jobs_all = df_jobs.iloc[keep_inds]
 
@@ -83,7 +91,7 @@ class JobsListLabeler:
         labeling = True
         prompt = 'y/n/float/stop/recalc?'
         while labeling:
-            for ind, row in self.df_jobs.drop('description', axis=1).iterrows():
+            for ind, row in self.df_jobs.drop(['description', 'scraped_file'], axis=1).iterrows():
                 if not self.labels_dao.labeled(row.url):
                     row = row.drop(self.intermidiate_score_cols).dropna()
                     resp = input(str(row) + '\n' + prompt)
@@ -91,11 +99,11 @@ class JobsListLabeler:
                         labeling = False
                         break
                     if resp == 'recalc':
-                        self._load_and_process_data()
+                        self._recalc()
                         break
                     self.labels_dao.label(row.url, resp)
                     if recalc_everytime:
-                        self._load_and_process_data()
+                        self._recalc()
 
     @staticmethod
     def _pandas_console_options():

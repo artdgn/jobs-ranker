@@ -18,9 +18,10 @@ parser.add_argument("-d", "--delay", type=float, default=10,
 parser.add_argument("-r", "--recalc", action="store_true",
                     help="whether to recalc model after every new label")
 parser.add_argument("-nd", "--no-dedup", action="store_true",
-                    help="prevent deduplication of recent scrape w/r to historic scrapes")
+                    help="prevent deduplication of newest scrapes w/r to historic scrapes")
 args = parser.parse_args()
 
+os.chdir(os.path.dirname(__file__))
 
 if args.scrape:
     s_proc = Process(target=start_scraping).start()
@@ -36,7 +37,7 @@ jobs = JobsListLabeler(
     keywords=keywords_json,
     labeled=labeled_jobs_csv,
     older_scraped=crawls,
-    dedup_last=(not args.no_dedup))
+    dedup_new=(not args.no_dedup))
 
 jobs.label_jobs(recalc_everytime=args.recalc)
 
