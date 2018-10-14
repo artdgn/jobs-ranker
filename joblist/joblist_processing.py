@@ -17,13 +17,15 @@ class JobsListLabeler:
     salary_guess_col = 'salary_guess'
 
     def __init__(self, scraped, keywords, labeled,
-                 older_scraped=(), dedup_new=True, dup_keep='first'):
+                 older_scraped=(), dedup_new=True,
+                 dup_keep='first', skipped_as_negatives=True):
         self.scraped_source = scraped
         self.keywords_source = keywords
         self.labeled_source = labeled
         self.older_scraped = older_scraped
         self.dedup_new = dedup_new
         self.dup_keep = dup_keep
+        self.skipped_as_negatives = skipped_as_negatives
         self.regressor = None
         self.model_score = None
         self.regressor_salary = None
@@ -37,8 +39,9 @@ class JobsListLabeler:
         self._read_labeled()
         self._read_all_scraped()
         self._read_last_scraped(dedup=self.dedup_new)
-        self._read_keywords()
-        self._process_df()
+        if len(self.df_jobs):
+            self._read_keywords()
+            self._process_df()
 
     def _recalc(self):
         self._read_keywords()
@@ -100,23 +103,32 @@ class JobsListLabeler:
         self.df_jobs_all = df_jobs.iloc[keep_inds]
 
     def label_jobs(self, recalc_everytime=True):
-        labeling = True
-        prompt = 'y / n / float / stop / recalc? : '
-        not_show_cols = ['description', 'scraped_file', 'salary', 'date']
-        while labeling:
-            for ind, row in self.df_jobs.drop(not_show_cols, axis=1).iterrows():
-                if not self.labels_dao.labeled(row.url):
-                    row = row.drop(self.intermidiate_score_cols).dropna()
-                    resp = input(str(row) + '\n' + prompt)
-                    if resp == 'stop':
-                        labeling = False
-                        break
-                    if resp == 'recalc':
-                        self._recalc()
-                        break
+        prompt = 'y / n / float / stop / skip / recalc? : '
+        not_show_cols = ['description', 'scraped_file', 'salary', 'date'] + \
+                        self.intermidiate_score_cols
+        df_show = self.df_jobs.drop(not_show_cols, axis=1)
+        urls_to_label =  self.df_jobs['url'].tolist()
+        while len(urls_to_label):
+            url = urls_to_label[-1]
+            if self.labels_dao.labeled(url):
+                urls_to_label.pop()
+            else:
+                row = df_show.loc[df_show['url']==url].iloc[0].dropna()
+                resp = input(str(row) + '\n' + prompt)
+                if resp == 'stop':
+                    break
+                elif resp == 'recalc':
+                    self._recalc()
+                elif resp == 'skip':
+                    urls_to_label.pop()
+                else:
                     self.labels_dao.label(row.url, resp)
-                    if recalc_everytime:
-                        self._recalc()
+                    urls_to_label.pop()
+                if recalc_everytime:
+                    self._recalc()
+        if not len(urls_to_label):
+            print('No more new unlabeled jobs. Try turning dedup off to go over duplicates.')
+
 
     @staticmethod
     def _pandas_console_options():
@@ -158,9 +170,9 @@ class JobsListLabeler:
         self.df_jobs = self._sort_jobs(self.df_jobs)
 
     def _sort_jobs(self, df):
-        sort_col = self.keyword_score_col
-        if self.model_score is not None and self.model_score > 0.2:
-            sort_col = self.model_score_col
+        # sort_col = self.keyword_score_col
+        # if self.model_score is not None and self.model_score > 0.2:
+        sort_col = self.model_score_col
         df.sort_values(sort_col, ascending=False, inplace=True)
         return df
 
@@ -213,7 +225,7 @@ class JobsListLabeler:
 
         return df
 
-    def _add_model_score(self, df, refit=True, skipped_as_negatives=True):
+    def _add_model_score(self, df, refit=True):
 
         if self.regressor is None or refit:
 
@@ -227,7 +239,7 @@ class JobsListLabeler:
                 replace('n', '0.0').\
                 astype(float)
 
-            if skipped_as_negatives:
+            if self.skipped_as_negatives:
                 df_past_skipped = df_jobs_all.loc[
                                   ~df_jobs_all.url.isin(
                                       df_join.reset_index()['url'].tolist() +
