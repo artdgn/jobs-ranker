@@ -21,7 +21,7 @@ parser.add_argument("-nd", "--no-dedup", action="store_true",
                     help="prevent deduplication of newest scrapes w/r to historic scrapes")
 args = parser.parse_args()
 
-os.chdir(os.path.dirname(__file__))
+os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
 if args.scrape:
     s_proc = Process(target=start_scraping).start()

@@ -7,6 +7,10 @@ scraping parts forked and adjusted from http://quotes.toscrape.com ([github repo
 
 
 #### ideas
+    summary / sentiment:
+        https://elitedatascience.com/python-nlp-libraries
+        https://www.reddit.com/r/datascience/comments/8qde2g/sentiment_analysis_in_python_any_pretrained_models/
+        http://nlp.town/blog/off-the-shelf-sentiment-analysis/        
     find a way to handle the imbalance (weights for regression?)
     web frontend (django)
     separate tuning and refitting

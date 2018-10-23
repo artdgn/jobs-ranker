@@ -103,30 +103,33 @@ class JobsListLabeler:
         self.df_jobs_all = df_jobs.iloc[keep_inds]
 
     def label_jobs(self, recalc_everytime=True):
-        prompt = 'y / n / float / stop / skip / recalc? : '
+
+        def get_urls_stack():
+            return self.df_jobs['url'].tolist()[::-1]
+
+        prompt = 'y / n / float / stop / recalc? : '
         not_show_cols = ['description', 'scraped_file', 'salary', 'date'] + \
                         self.intermidiate_score_cols
-        df_show = self.df_jobs.drop(not_show_cols, axis=1)
-        urls_to_label =  self.df_jobs['url'].tolist()
-        while len(urls_to_label):
-            url = urls_to_label[-1]
-            if self.labels_dao.labeled(url):
-                urls_to_label.pop()
-            else:
-                row = df_show.loc[df_show['url']==url].iloc[0].dropna()
+        urls_stack = get_urls_stack()
+        while len(urls_stack):
+            url = urls_stack.pop()
+            if not self.labels_dao.labeled(url):
+                row = self.df_jobs.loc[self.df_jobs['url']==url].iloc[0].\
+                    dropna().drop(not_show_cols)
                 resp = input(str(row) + '\n' + prompt)
+
                 if resp == 'stop':
                     break
                 elif resp == 'recalc':
                     self._recalc()
-                elif resp == 'skip':
-                    urls_to_label.pop()
+                    urls_stack = get_urls_stack()
                 else:
                     self.labels_dao.label(row.url, resp)
-                    urls_to_label.pop()
-                if recalc_everytime:
-                    self._recalc()
-        if not len(urls_to_label):
+                    if recalc_everytime:
+                        self._recalc()
+                        urls_stack = get_urls_stack()
+
+        if not len(urls_stack):
             print('No more new unlabeled jobs. Try turning dedup off to go over duplicates.')
 
 
