@@ -107,19 +107,25 @@ class JobsListLabeler:
         def get_urls_stack():
             return self.df_jobs['url'].tolist()[::-1]
 
-        prompt = 'y / n / float / stop / recalc? : '
+        prompt = 'y / n / float / stop / recalc / skip ? : '
         not_show_cols = ['description', 'scraped_file', 'salary', 'date'] + \
                         self.intermidiate_score_cols
         urls_stack = get_urls_stack()
+        skipped = set()
         while len(urls_stack):
             url = urls_stack.pop()
-            if not self.labels_dao.labeled(url):
-                row = self.df_jobs.loc[self.df_jobs['url']==url].iloc[0].\
-                    dropna().drop(not_show_cols)
+            if (not self.labels_dao.labeled(url)) and not (url in skipped):
+                row = self.df_jobs.loc[self.df_jobs['url']==url].iloc[0]. \
+                    drop(not_show_cols).dropna()
                 resp = input(str(row) + '\n' + prompt)
 
                 if resp == 'stop':
                     break
+
+                elif resp == 'skip':
+                    skipped.add(url)
+                    continue
+
                 elif resp == 'recalc':
                     self._recalc()
                     urls_stack = get_urls_stack()
