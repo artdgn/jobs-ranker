@@ -31,11 +31,14 @@ def dedup_by_descriptions_similarity(strings, keep='first'):
     return sorted(list(keep_inds)), dup_dict_inds
 
 
-def duplicates_by_tfidf_cosine(strings, dup_threshold=0.4):
+def duplicates_by_tfidf_cosine(strings, dup_threshold=0.4, connect_cooccurring=True):
     tf = TfidfVectorizer(ngram_range=(1,3), max_df=50, stop_words='english')
     vecs = tf.fit_transform(strings)
     simil_mat = cosine_similarity(vecs)
     simil_mat -= np.eye(*simil_mat.shape)
+    if connect_cooccurring:
+        simil_mat = simil_mat.T @ simil_mat  # connect similarities
+        # dup_threshold *= dup_threshold  # square threshold (because multiplying similarity scores)
     dup_i, dup_j = np.where(simil_mat > dup_threshold)
     return dup_i, dup_j
     # pd.Series(simil_mat.ravel()).hist(bins=200)

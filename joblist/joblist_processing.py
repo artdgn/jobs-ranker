@@ -36,8 +36,8 @@ class JobsListLabeler:
         self._load_and_process_data()
 
     def _load_and_process_data(self):
-        self._read_labeled()
         self._read_all_scraped()
+        self._read_labeled()
         self._read_last_scraped(dedup=self.dedup_new)
         if len(self.df_jobs):
             self._read_keywords()
@@ -59,7 +59,7 @@ class JobsListLabeler:
                 self.keywords = json.loads(keywords)
 
     def _read_labeled(self):
-        self.labels_dao = LabeledJobs(self.labeled_source)
+        self.labels_dao = LabeledJobs(self.labeled_source, dup_dict = self.dup_dict)
 
     def _read_scrapy_file(self, filename):
         df = pd.read_csv(filename)
@@ -97,8 +97,6 @@ class JobsListLabeler:
         urls = df_jobs['url'].values
         self.dup_dict = {urls[i]: urls[sorted([i] + list(dups))]
                          for i, dups in dup_dict_inds.items()}
-
-        self.labels_dao.dedup(self.dup_dict, keep=self.dup_keep)
 
         self.df_jobs_all = df_jobs.iloc[keep_inds]
 
@@ -240,7 +238,9 @@ class JobsListLabeler:
 
             df_jobs_all = self.df_jobs_all.copy()
 
-            df_join = self.labels_dao.df.set_index('url').\
+            labels_df = self.labels_dao.export_df(keep=self.dup_keep)
+
+            df_join = labels_df.set_index('url').\
                 join(df_jobs_all.set_index('url'), how='left')
 
             df_join['target'] = df_join['label'].\
