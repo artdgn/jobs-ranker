@@ -23,6 +23,9 @@ class RegTrainer():
 
     def train_regressor(self, df, cat_cols, num_cols, y_col, select_cols=False):
 
+        if df[y_col].isnull().sum():
+            raise ValueError('Target column contains nans')
+
         x, y = df[cat_cols + num_cols], df[y_col].values
 
         pipe, reg = build_RF_pipiline(cat_cols, num_cols)

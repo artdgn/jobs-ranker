@@ -100,7 +100,7 @@ class JobsListLabeler:
 
         self.df_jobs_all = df_jobs.iloc[keep_inds]
 
-    def label_jobs(self, recalc_everytime=True):
+    def label_jobs(self, recalc_everytime=False):
 
         def get_urls_stack():
             return self.df_jobs['url'].tolist()[::-1]
