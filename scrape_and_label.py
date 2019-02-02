@@ -1,6 +1,4 @@
 import os
-import time
-from multiprocessing import Process
 from argparse import ArgumentParser
 
 from crawler.scaping import start_scraping, crawls_dir
@@ -13,8 +11,6 @@ keywords_json = 'data/keywords.json'
 parser = ArgumentParser()
 parser.add_argument("-s", "--scrape", action="store_true",
                     help="whether to scrape")
-parser.add_argument("-d", "--delay", type=float, default=10,
-                    help="delay in seconds between after start of scraping")
 parser.add_argument("-r", "--recalc", action="store_true",
                     help="whether to recalc model after every new label")
 parser.add_argument("-n", "--no-dedup", action="store_true",
@@ -25,11 +21,12 @@ args = parser.parse_args()
 
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
+
 if args.scrape:
-    s_proc = Process(target=start_scraping).start()
-    print(f'Starting scraping.. waiting for {args.delay} '
-          f'seconds before labeling results.')
-    time.sleep(args.delay)
+    s_proc, scrape_log = start_scraping()
+    print(f'Started scraping, waiting for results... check log file at {scrape_log}')
+    s_proc.join()
+
 
 crawls = [os.path.join(crawls_dir, f)
           for f in sorted(os.listdir(crawls_dir))]
