@@ -3,11 +3,14 @@ import os
 from itertools import product
 
 import pandas as pd
+import pandas.errors
 import re
 
 from joblist.labeled_jobs import LabeledJobs
 from modeling.descriptions_similarity import dedup_by_descriptions_similarity
 from modeling.regression import RegTrainer
+
+from utils.logger import logger
 
 
 class JobsListLabeler:
@@ -60,22 +63,31 @@ class JobsListLabeler:
 
     def _read_labeled(self):
         self.labels_dao = LabeledJobs(self.labeled_source, dup_dict = self.dup_dict)
+        logger.info(f'total labeled jobs DF: {len(self.labels_dao.df)}')
 
     def _read_scrapy_file(self, filename):
-        df = pd.read_csv(filename)
-        drop_cols = [col for col in df.columns if col.startswith('download_')] + \
-                    ['depth']
-        df.drop(drop_cols, axis=1, inplace=True)
-        df['scraped_file'] = filename
-        return df
+        try:
+            df = pd.read_csv(filename)
+        except pandas.errors.EmptyDataError as e:
+            logger.info(f'found empty scrape file:{filename}. trying to delete.')
+            os.remove(filename)
+            return pd.DataFrame()
+        else:
+            drop_cols = [col for col in df.columns if col.startswith('download_')] + \
+                        ['depth']
+            df.drop(drop_cols, axis=1, inplace=True)
+            df['scraped_file'] = filename
+            return df
 
     def _read_last_scraped(self, dedup=True):
         if not dedup:
             self.df_jobs = self._read_scrapy_file(self.scraped_source)
             self._add_duplicates_column()
         else:
-            self.df_jobs = self.df_jobs_all.loc[self.df_jobs_all['scraped_file'] ==
-                                                self.scraped_source, :]
+            self.df_jobs = self.df_jobs_all.\
+                               loc[self.df_jobs_all['scraped_file'] == self.scraped_source, :]
+        logger.info(f'most recent scrape DF: {len(self.df_jobs)} ({self.scraped_source}, '
+                    f'all scraped: {len(self._read_scrapy_file(self.scraped_source))})')
 
     def _add_duplicates_column(self):
         dup_no_self = {k: [u for u in v if u != k] for k, v in self.dup_dict.items()}
@@ -99,6 +111,8 @@ class JobsListLabeler:
                          for i, dups in dup_dict_inds.items()}
 
         self.df_jobs_all = df_jobs.iloc[keep_inds]
+
+        logger.info(f'total historic jobs DF: {len(self.df_jobs_all)} (deduped from {len(df_jobs)})')
 
     def label_jobs(self, recalc_everytime=False):
 
@@ -134,7 +148,7 @@ class JobsListLabeler:
                         urls_stack = get_urls_stack()
 
         if not len(urls_stack):
-            print('No more new unlabeled jobs. Try turning dedup off to go over duplicates.')
+            logger.info('No more new unlabeled jobs. Try turning dedup off to go over duplicates.')
 
 
     @staticmethod

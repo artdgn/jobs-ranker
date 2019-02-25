@@ -10,6 +10,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer
 
+from utils.logger import logger
+
 
 class RegTrainer():
 
@@ -50,10 +52,11 @@ class RegTrainer():
         metrics = score_metrics(y, y_pred)
         describe = lambda vec, name: pd.Series(vec).describe().to_frame(name).transpose()
         if is_binary_target(y):
-            print(self.print_prefix, 'oob scores:\n',
-                  pd.concat([describe(reg.oob_prediction_[y == 1], 'positives'),
-                             describe(reg.oob_prediction_[y == 0], 'negatives')]))
-        print(pd.Series(metrics).to_frame(self.print_prefix).transpose())
+            oob_scores = pd.concat([
+                describe(reg.oob_prediction_[y == 1], 'positives'),
+                describe(reg.oob_prediction_[y == 0], 'negatives')])
+            logger.info(f"{self.print_prefix}, 'oob scores:\n {oob_scores}")
+        logger.info(f'\n {pd.Series(metrics).to_frame(self.print_prefix).transpose()}')
         return metrics
 
     def exhaustive_column_selection(self, cat_cols, num_cols, x, y, metric):
@@ -71,10 +74,10 @@ class RegTrainer():
 
             res.append((test_metrics[metric], cols))
 
-            print('selection', test_metrics, (test_metrics[metric], cols))
+            logger.info(f'selection {test_metrics} {(test_metrics[metric], cols)}')
 
         best_cols = sorted(res)[-1][1]
-        print('best', best_cols)
+        logger.info(f'best: {best_cols}')
 
         pipe, reg = build_RF_pipiline([col for col in cat_cols if col in best_cols],
                                       [col for col in num_cols if col in best_cols])
