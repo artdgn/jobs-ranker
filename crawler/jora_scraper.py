@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 import scrapy
 
-class ToScrapeCSSSpider(scrapy.Spider):
+
+class _JoraSpider(scrapy.Spider):
     name = "toscrape-css"
-    start_urls = [
-        'https://au.jora.com/j?l=Sydney+NSW&q=machine+learning&sa=110000&sp=facet_salary_min'
-    ]
+    start_urls = []
     base_url = 'https://au.jora.com'
 
     def parse(self, response):
@@ -34,3 +32,8 @@ class ToScrapeCSSSpider(scrapy.Spider):
         item = response.meta
         item['description'] = '\n'.join(response.css('.summary ::text').extract())
         yield item
+
+
+def get_jora_spider_for_url(search_url):
+    _JoraSpider.start_urls.append(search_url)
+    return _JoraSpider

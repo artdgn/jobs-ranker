@@ -1,15 +1,21 @@
 import os
 import pandas as pd
 
+from common import LABELED_ROOT_DIR
+
+
 class LabeledJobs:
 
     url_col = 'url'
     label_col = 'label'
 
-    def __init__(self, filename, dup_dict=None):
-        self.filename = filename
+    def __init__(self, task_name, dup_dict=None):
+        self.filename = self._task_name_to_filename(task_name)
         self.dup_dict = dup_dict if dup_dict is not None else {}
-        self.df = self.load(filename)
+        self.df = self.load(self.filename)
+
+    def _task_name_to_filename(self, task_name):
+        return os.path.join(LABELED_ROOT_DIR, f'{task_name}.csv')
 
     def save(self):
         self.df.to_csv(self.filename, index=None)

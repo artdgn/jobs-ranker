@@ -1,3 +1,2 @@
 scrapy
-editdistance
 scikit-learn

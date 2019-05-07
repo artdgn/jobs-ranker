@@ -1,11 +1,22 @@
 from collections import defaultdict
 
-import editdistance
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import squareform, pdist
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+from utils.logger import logger
+
+
+def optional_import(package_name):
+    import importlib
+    try:
+        return importlib.import_module(package_name)
+    except ImportError as e:
+        logger.error(f'pip install {package_name} module to use called functionality')
+        logger.exception()
+        raise e
 
 
 def dedup_by_descriptions_similarity(strings, keep='first'):
@@ -45,6 +56,9 @@ def duplicates_by_tfidf_cosine(strings, dup_threshold=0.4, connect_cooccurring=T
 
 
 def duplicates_by_edit_distance(strings, n_first_words=100, dup_threshold=50):
+
+    editdistance = optional_import('editdistance')
+
     vec = pd.Series(strings).str.split().values
 
     dist_func = lambda u, v: \

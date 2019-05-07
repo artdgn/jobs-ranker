@@ -9,6 +9,7 @@ import re
 from joblist.labeled_jobs import LabeledJobs
 from modeling.descriptions_similarity import dedup_by_descriptions_similarity
 from modeling.regression import RegTrainer
+from tasks.config import get_task_config, TaskConfig
 
 from utils.logger import logger
 
@@ -19,12 +20,11 @@ class JobsListLabeler:
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
 
-    def __init__(self, scraped, keywords, labeled,
+    def __init__(self, scraped, task_config: TaskConfig,
                  older_scraped=(), dedup_new=True,
                  dup_keep='first', skipped_as_negatives=True):
         self.scraped_source = scraped
-        self.keywords_source = keywords
-        self.labeled_source = labeled
+        self.task_config = task_config
         self.older_scraped = older_scraped
         self.dedup_new = dedup_new
         self.dup_keep = dup_keep
@@ -43,26 +43,19 @@ class JobsListLabeler:
         self._read_labeled()
         self._read_last_scraped(dedup=self.dedup_new)
         if len(self.df_jobs):
-            self._read_keywords()
+            self._read_task_config()
             self._process_df()
 
     def _recalc(self):
-        self._read_keywords()
+        self._read_task_config()
         self._process_df()
 
-    def _read_keywords(self):
-        keywords = self.keywords_source
-        if isinstance(keywords, dict):
-          self.keywords = keywords
-        elif isinstance(keywords, str):
-            if os.path.exists(keywords):
-                with open(keywords, 'rt') as f:
-                    self.keywords = json.load(f)
-            else:
-                self.keywords = json.loads(keywords)
+    def _read_task_config(self):
+        self.task_config = get_task_config(self.task_config.name)
 
     def _read_labeled(self):
-        self.labels_dao = LabeledJobs(self.labeled_source, dup_dict = self.dup_dict)
+        self.labels_dao = LabeledJobs(task_name=self.task_config.name,
+                                      dup_dict = self.dup_dict)
         logger.info(f'total labeled jobs DF: {len(self.labels_dao.df)}')
 
     def _read_scrapy_file(self, filename):
@@ -206,18 +199,18 @@ class JobsListLabeler:
             regex = named_regex(keyword_list, group_name)
             return lambda s: len(re.findall(regex, s.lower())) / len(s)
 
-        for source, weight in product(['description', 'title'], ['pos', 'neg']):
+        for source, weight in product(['description', 'title'], ['positive', 'negative']):
             kind = '%s_%s' % (source, weight)
             col = kind + '_count'
-            df[col] = df[source].apply(keyword_density_func(self.keywords[kind], kind))
+            df[col] = df[source].apply(keyword_density_func(self.task_config[kind], kind))
             if col not in self.intermidiate_score_cols:
                 self.intermidiate_score_cols.append(col)
 
         df[self.keyword_score_col] = \
-            1 / df.description_pos_count.rank(ascending=False) - \
-            1 / df.description_neg_count.rank(ascending=False) + \
-            1 / df.title_pos_count.rank(ascending=False) - \
-            1 / df.title_neg_count.rank(ascending=False)
+            1 / df.description_positive_count.rank(ascending=False) - \
+            1 / df.description_negative_count.rank(ascending=False) + \
+            1 / df.title_positive_count.rank(ascending=False) - \
+            1 / df.title_negative_count.rank(ascending=False)
         return df
 
     def _add_salary_guess(self, df, refit=False):
