@@ -9,6 +9,7 @@ scraping parts forked and adjusted from http://quotes.toscrape.com ([github repo
 #### ideas / todo
     eng:
         refactor configuration and search url (to support multiple kinds of searches)
+        refactor config and magic numbers
         web frontend django / jupyter
         tests
         

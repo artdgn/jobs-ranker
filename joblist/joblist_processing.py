@@ -38,6 +38,7 @@ class JobsListLabeler:
         self._pandas_console_options()
         self._load_and_process_data()
 
+
     def _load_and_process_data(self):
         self._read_all_scraped()
         self._read_labeled()
@@ -46,17 +47,21 @@ class JobsListLabeler:
             self._read_task_config()
             self._process_df()
 
+
     def _recalc(self):
         self._read_task_config()
         self._process_df()
 
+
     def _read_task_config(self):
         self.task_config = get_task_config(self.task_config.name)
+
 
     def _read_labeled(self):
         self.labels_dao = LabeledJobs(task_name=self.task_config.name,
                                       dup_dict = self.dup_dict)
         logger.info(f'total labeled jobs DF: {len(self.labels_dao.df)}')
+
 
     def _read_scrapy_file(self, filename):
         try:
@@ -72,6 +77,7 @@ class JobsListLabeler:
             df['scraped_file'] = filename
             return df
 
+
     def _read_last_scraped(self, dedup=True):
         if not dedup:
             self.df_jobs = self._read_scrapy_file(self.scraped_source)
@@ -82,11 +88,13 @@ class JobsListLabeler:
         logger.info(f'most recent scrape DF: {len(self.df_jobs)} ({self.scraped_source}, '
                     f'all scraped: {len(self._read_scrapy_file(self.scraped_source))})')
 
+
     def _add_duplicates_column(self):
         dup_no_self = {k: [u for u in v if u != k] for k, v in self.dup_dict.items()}
         df_dups = pd.DataFrame({'url': list(dup_no_self.keys()),
                                 'duplicates': list(dup_no_self.values())})
         self.df_jobs = pd.merge(self.df_jobs, df_dups, on='url', how='left')
+
 
     def _read_all_scraped(self):
         files = list(self.older_scraped) + [self.scraped_source]
@@ -106,6 +114,7 @@ class JobsListLabeler:
         self.df_jobs_all = df_jobs.iloc[keep_inds]
 
         logger.info(f'total historic jobs DF: {len(self.df_jobs_all)} (deduped from {len(df_jobs)})')
+
 
     def label_jobs(self, recalc_everytime=False):
 
@@ -151,6 +160,7 @@ class JobsListLabeler:
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', 1000)
 
+
     @staticmethod
     def _extract_numeric_fields_on_row(row):
         row['description'] = str(row['description']).lower().replace('\n', ' ').replace('\t', ' ')
@@ -171,10 +181,12 @@ class JobsListLabeler:
             row['days_age'] = int(int(date_nums[0]) * date_mult)
         return row
 
+
     def _extract_numeric_fields(self, df):
         df = df.apply(self._extract_numeric_fields_on_row, axis=1)
         # df.drop(['salary', 'date'], axis=1, inplace=True)
         return df
+
 
     def _process_df(self):
         self.df_jobs = self._extract_numeric_fields(self.df_jobs)
@@ -183,12 +195,14 @@ class JobsListLabeler:
         self.df_jobs = self._add_model_score(self.df_jobs)
         self.df_jobs = self._sort_jobs(self.df_jobs)
 
+
     def _sort_jobs(self, df):
-        # sort_col = self.keyword_score_col
-        # if self.model_score is not None and self.model_score > 0.2:
-        sort_col = self.model_score_col
+        sort_col = [self.keyword_score_col, self.model_score_col]
+        if self.model_score is not None and self.model_score > 0.1:
+            sort_col.reverse()
         df.sort_values(sort_col, ascending=False, inplace=True)
         return df
+
 
     def _add_keyword_score(self, df):
 
@@ -213,80 +227,99 @@ class JobsListLabeler:
             1 / df.title_negative_count.rank(ascending=False)
         return df
 
+
     def _add_salary_guess(self, df, refit=False):
 
         if self.regressor_salary is None or refit:
+            self._train_salary_regressor()
 
-            df_jobs = self.df_jobs_all.copy()
-            df_jobs = self._extract_numeric_fields(df_jobs)
-            df_jobs = self._add_keyword_score(df_jobs)
+        df[self.salary_guess_col] = (self.regressor_salary.predict(df)
+                                     if self.regressor_salary else 0)
 
-            target_col = 'salary_high'
+        return df
 
-            # cat_cols = ['description']
-            cat_cols = ['description', 'title']
-            df_jobs.dropna(subset=cat_cols + [target_col], inplace=True)
+
+    def _train_salary_regressor(self):
+        df_train = self.df_jobs_all.copy()
+        df_train = self._extract_numeric_fields(df_train)
+        df_train = self._add_keyword_score(df_train)
+
+        target_col = 'salary_high'
+
+        # cat_cols = ['description']
+        cat_cols = ['description', 'title']
+        df_train.dropna(subset=cat_cols + [target_col], inplace=True)
+
+        if len(df_train) > 10:
             num_cols = [self.keyword_score_col]
             self.regressor_salary, self.reg_sal_model_score = \
-                RegTrainer(print_prefix='salary: ').\
-                    train_regressor(df_jobs,
+                RegTrainer(print_prefix='salary: '). \
+                    train_regressor(df_train,
                                     cat_cols=cat_cols,
                                     num_cols=num_cols,
                                     y_col=target_col,
                                     select_cols=False)
+        else:
+            logger.warn(f'Not training salary regressor due to '
+                        f'having only {len(df_train)} samples')
 
-        df[self.salary_guess_col] = self.regressor_salary.predict(df)
-
-        return df
 
     def _add_model_score(self, df, refit=True):
 
         if self.regressor is None or refit:
+            self._train_label_regressor()
 
-            df_jobs_all = self.df_jobs_all.copy()
+        df[self.model_score_col] = (self.regressor.predict(df)
+                                    if self.regressor is not None else 0)
 
-            labels_df = self.labels_dao.export_df(keep=self.dup_keep)
+        return df
 
-            df_join = labels_df.set_index('url').\
-                join(df_jobs_all.set_index('url'), how='left')
 
-            df_join['target'] = df_join['label'].\
-                replace('y', '1.0').\
-                replace('n', '0.0').\
-                astype(float)
+    def _train_label_regressor(self):
 
-            if self.skipped_as_negatives:
-                df_past_skipped = df_jobs_all.loc[
-                                  ~df_jobs_all.url.isin(
-                                      df_join.reset_index()['url'].tolist() +
-                                      self.df_jobs['url'].tolist()), :].copy()
-                df_past_skipped.loc[:, 'target'] = 0.0
-                df_join = df_join.append(df_past_skipped, sort=True)
+        df_jobs_all = self.df_jobs_all.copy()
 
-            # cat_cols = ['description']
-            cat_cols = ['description', 'title']
+        labels_df = self.labels_dao.export_df(keep=self.dup_keep)
 
-            df_join.dropna(subset=cat_cols, inplace=True)
+        df_train = labels_df.set_index('url'). \
+            join(df_jobs_all.set_index('url'), how='left')
 
-            df_join = self._extract_numeric_fields(df_join)
-            df_join = self._add_keyword_score(df_join)
-            df_join = self._add_salary_guess(df_join)
+        df_train['target'] = df_train['label']. \
+            replace('y', '1.0'). \
+            replace('n', '0.0'). \
+            astype(float)
+
+        if self.skipped_as_negatives:
+            df_past_skipped = df_jobs_all.loc[
+                              ~df_jobs_all.url.isin(
+                                  df_train.reset_index()['url'].tolist() +
+                                  self.df_jobs['url'].tolist()), :].copy()
+            df_past_skipped.loc[:, 'target'] = 0.0
+            df_train = df_train.append(df_past_skipped, sort=True)
+
+        # cat_cols = ['description']
+        cat_cols = ['description', 'title']
+
+        df_train.dropna(subset=cat_cols, inplace=True)
+
+        if len(df_train) > 10:
+            df_train = self._extract_numeric_fields(df_train)
+            df_train = self._add_keyword_score(df_train)
+            df_train = self._add_salary_guess(df_train)
 
             num_cols = self.intermidiate_score_cols + [self.keyword_score_col, self.salary_guess_col]
             # num_cols = self.intermidiate_score_cols + [self.keyword_score_col]
             # num_cols = []
 
             self.regressor, self.model_score = \
-                RegTrainer(print_prefix='label: ').\
-                    train_regressor(df_join,
+                RegTrainer(print_prefix='label: '). \
+                    train_regressor(df_train,
                                     cat_cols=cat_cols,
                                     num_cols=num_cols,
                                     y_col='target',
                                     select_cols=False)
-
-        df[self.model_score_col] = self.regressor.predict(df)
-
-        return df
-
+        else:
+            logger.warn(f'Not training label regressor due to '
+                        f'having only {len(df_train)} samples')
 
 
