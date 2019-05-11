@@ -1,0 +1,33 @@
+{
+  "search_url": "https://au.jora.com/j?a=14d&l=Sydney+NSW&q=software+engineer&sa=110000&sp=facet_salary_min",
+  "title_positive": [
+    "senior",
+    "ninja",
+    "python"
+  ],
+  "title_negative": [
+    "junior",
+    "full-stack",
+    "java"
+  ],
+  "description_positive": [
+    "python",
+    "startup",
+    "barista",
+    "bean-bags",
+    "bonus",
+    "flexible",
+    "conferences",
+    "blockchain",
+    "virtual reality",
+    "Elon Musk"
+  ],
+  "description_negative": [
+    "java",
+    "bank",
+    "legacy",
+    "TPS forms",
+    "cubicles",
+    "mainframe"
+  ]
+}

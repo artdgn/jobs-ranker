@@ -126,7 +126,7 @@ class JobsListLabeler:
         def get_urls_stack():
             return self.df_jobs['url'].tolist()[::-1]
 
-        prompt = 'enter score: y (=1.0) / n (=0.0) / number / stop / recalc / skip ? : '
+        prompt = 'enter score: y (=1.0) / n (=0.0) / score [0.0 - 1.0] / stop / recalc / skip ? : '
         not_show_cols = ['description', 'scraped_file', 'salary', 'date'] + \
                         self.intermidiate_score_cols
         urls_stack = get_urls_stack()
