@@ -1,4 +1,3 @@
-import json
 import os
 from itertools import product
 
@@ -19,6 +18,12 @@ class JobsListLabeler:
     keyword_score_col = 'keyword_score'
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
+    pos_label = 'y'
+    neg_label = 'n'
+    skip_token = 'skip'
+    stop_token = 'stop'
+    recalc_token = 'recalc'
+    control_tokens = [skip_token, stop_token, recalc_token]
 
     def __init__(self, scraped, task_config: TaskConfig,
                  older_scraped=(), dedup_new=True,
@@ -121,28 +126,38 @@ class JobsListLabeler:
         def get_urls_stack():
             return self.df_jobs['url'].tolist()[::-1]
 
-        prompt = 'y / n / float / stop / recalc / skip ? : '
+        prompt = 'enter score: y (=1.0) / n (=0.0) / number / stop / recalc / skip ? : '
         not_show_cols = ['description', 'scraped_file', 'salary', 'date'] + \
                         self.intermidiate_score_cols
         urls_stack = get_urls_stack()
         skipped = set()
         while len(urls_stack):
+
             url = urls_stack.pop()
+
             if (not self.labels_dao.labeled(url)) and not (url in skipped):
+
                 row = self.df_jobs.loc[self.df_jobs['url']==url].iloc[0]. \
                     drop(not_show_cols).dropna()
-                resp = input(str(row) + '\n' + prompt)
 
-                if resp == 'stop':
+                print(str(row))
+
+                resp = input(prompt)
+
+                while not self._is_valid_input(resp):
+                    resp = input(prompt)
+
+                if resp == self.stop_token:
                     break
 
-                elif resp == 'skip':
+                elif resp == self.skip_token:
                     skipped.add(url)
                     continue
 
-                elif resp == 'recalc':
+                elif resp == self.recalc_token:
                     self._recalc()
                     urls_stack = get_urls_stack()
+
                 else:
                     self.labels_dao.label(row.url, resp)
                     if recalc_everytime:
@@ -150,7 +165,21 @@ class JobsListLabeler:
                         urls_stack = get_urls_stack()
 
         if not len(urls_stack):
-            logger.info('No more new unlabeled jobs. Try turning dedup off to go over duplicates.')
+            logger.info('No more new unlabeled jobs. '
+                        'Try turning dedup off to go over duplicates. '
+                        'run with --help flag for more info')
+
+
+    def _is_valid_input(self, label: str):
+        try:
+            if label not in self.control_tokens:
+                label = float(label.
+                              replace(self.pos_label, '1.0').
+                              replace(self.neg_label, '0.0'))
+            return True
+        except ValueError:
+            logger.error(f'Invalid input : {label}')
+            return False
 
 
     @staticmethod
@@ -184,7 +213,6 @@ class JobsListLabeler:
 
     def _extract_numeric_fields(self, df):
         df = df.apply(self._extract_numeric_fields_on_row, axis=1)
-        # df.drop(['salary', 'date'], axis=1, inplace=True)
         return df
 
 
@@ -197,10 +225,13 @@ class JobsListLabeler:
 
 
     def _sort_jobs(self, df):
-        sort_col = [self.keyword_score_col, self.model_score_col]
-        if self.model_score is not None and self.model_score > 0.1:
-            sort_col.reverse()
-        df.sort_values(sort_col, ascending=False, inplace=True)
+        sort_cols = [self.model_score_col, self.keyword_score_col]
+        if self.model_score is None or self.model_score < 0.1:
+            sort_cols.reverse()
+            logger.info(f'Sorting by keyword-score instead of model-score '
+                        f'because model-score = {self.model_score}')
+        logger.info(f'Sorting by columns: {sort_cols}')
+        df.sort_values(sort_cols, ascending=False, inplace=True)
         return df
 
 
@@ -250,7 +281,7 @@ class JobsListLabeler:
         cat_cols = ['description', 'title']
         df_train.dropna(subset=cat_cols + [target_col], inplace=True)
 
-        if len(df_train) > 10:
+        if len(df_train) >= 10:
             num_cols = [self.keyword_score_col]
             self.regressor_salary, self.reg_sal_model_score = \
                 RegTrainer(print_prefix='salary: '). \
@@ -265,18 +296,15 @@ class JobsListLabeler:
 
 
     def _add_model_score(self, df, refit=True):
-
         if self.regressor is None or refit:
             self._train_label_regressor()
 
         df[self.model_score_col] = (self.regressor.predict(df)
                                     if self.regressor is not None else 0)
-
         return df
 
 
     def _train_label_regressor(self):
-
         df_jobs_all = self.df_jobs_all.copy()
 
         labels_df = self.labels_dao.export_df(keep=self.dup_keep)
@@ -285,8 +313,8 @@ class JobsListLabeler:
             join(df_jobs_all.set_index('url'), how='left')
 
         df_train['target'] = df_train['label']. \
-            replace('y', '1.0'). \
-            replace('n', '0.0'). \
+            replace(self.pos_label, '1.0'). \
+            replace(self.neg_label, '0.0'). \
             astype(float)
 
         if self.skipped_as_negatives:
@@ -302,7 +330,7 @@ class JobsListLabeler:
 
         df_train.dropna(subset=cat_cols, inplace=True)
 
-        if len(df_train) > 10:
+        if len(df_train) >= 10:
             df_train = self._extract_numeric_fields(df_train)
             df_train = self._add_keyword_score(df_train)
             df_train = self._add_salary_guess(df_train)

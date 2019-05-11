@@ -4,7 +4,6 @@ from argparse import ArgumentParser
 from crawler.scaping import start_scraping
 from joblist.joblist_processing import JobsListLabeler
 
-import common
 from tasks.config import get_task_config
 from utils.logger import logger
 

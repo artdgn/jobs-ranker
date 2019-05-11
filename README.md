@@ -1,18 +1,17 @@
-scraping parts forked and adjusted from http://quotes.toscrape.com ([github repo](https://github.com/scrapinghub/spidyquotes)).
+scraping machinery forked initially from http://quotes.toscrape.com ([github repo](https://github.com/scrapinghub/spidyquotes)).
 
 
 #### Running
-
-    python scrape_and_label.py --scrape --delay 10 --recalc
+    python scrape_and_label.py -s 
 
 
 #### ideas / todo
     eng:
-        refactor configuration and search url (to support multiple kinds of searches)
         refactor config and magic numbers
-        web frontend django / jupyter
-        tests
-        
+        inspect features importance + tfidf tokens for keywords
+        GUI - django / jupyter?
+        example task and readme.md 
+        tests        
         
     algo:
         summary / sentiment:
