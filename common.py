@@ -39,3 +39,7 @@ class MLParams:
    dedup_tfidf_max_df_ratio = 0.02
    dedup_simil_thershold = 0.5
 
+
+class InfoParams:
+    top_n_feat = 20
+

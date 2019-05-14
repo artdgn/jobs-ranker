@@ -128,8 +128,8 @@ class JobsListLabeler:
         def get_urls_stack():
             return self.df_jobs['url'].tolist()[::-1]
 
-        prompt = "Rate the job relevance on a scale of 0.0 to 1.0.\n" \
-                 "Score: y (=1.0) / n (=0.0) / score [0.0 - 1.0] / stop / recalc / skip ? : "
+        prompt = "Rate the job relevance on a scale of 0.0 to 1.0, or use 'y' for yes or 'n' for no.\n" \
+                 "Input ( y / n / number / stop / recalc / skip ): "
 
         not_show_cols = ['description', 'scraped_file', 'salary', 'date'] + \
                         self.intermidiate_score_cols
@@ -154,19 +154,20 @@ class JobsListLabeler:
                 if resp == self.stop_token:
                     break
 
-                elif resp == self.skip_token:
+                if resp == self.skip_token:
                     skipped.add(url)
                     continue
 
-                elif resp == self.recalc_token:
+                if resp == self.recalc_token:
                     self._recalc()
                     urls_stack = get_urls_stack()
+                    continue
 
-                else:
-                    self.labels_dao.label(row.url, resp)
-                    if recalc_everytime:
-                        self._recalc()
-                        urls_stack = get_urls_stack()
+                # not any of the control_tokens
+                self.labels_dao.label(row.url, resp)
+                if recalc_everytime:
+                    self._recalc()
+                    urls_stack = get_urls_stack()
 
         if not len(urls_stack):
             logger.info('No more new unlabeled jobs. '
@@ -177,10 +178,13 @@ class JobsListLabeler:
     def _is_valid_input(self, label: str):
         try:
             if label not in self.control_tokens:
-                label = float(label.
+                number = float(label.
                               replace(self.pos_label, '1.0').
                               replace(self.neg_label, '0.0'))
+                if not 0 <= number <= 1:
+                    raise ValueError
             return True
+
         except ValueError:
             logger.error(f'Invalid input : {label}')
             return False
@@ -290,7 +294,7 @@ class JobsListLabeler:
         if len(df_train) >= common.MLParams.min_training_samples:
             num_cols = [self.keyword_score_col]
             self.regressor_salary, self.reg_sal_model_score = \
-                RegTrainer(print_prefix='salary: '). \
+                RegTrainer(target_name='salary'). \
                     train_regressor(df_train,
                                     cat_cols=cat_cols,
                                     num_cols=num_cols,
@@ -305,19 +309,9 @@ class JobsListLabeler:
         if self.regressor is None or refit:
             self._train_label_regressor()
 
-        # self.inspect_regressor()
-
         df[self.model_score_col] = (self.regressor.predict(df)
                                     if self.regressor is not None else 0)
         return df
-
-
-    def inspect_regressor(self):
-        import numpy as np
-        n = 20
-        top_n_feat = np.argsort(self.regressor.steps[1][1].feature_importances_)[-n:]
-        feat_names = self.regressor.steps[0][1].get_feature_names()
-        np.array(feat_names)[top_n_feat]
 
 
     def _train_label_regressor(self):
@@ -341,7 +335,6 @@ class JobsListLabeler:
             df_past_skipped.loc[:, 'target'] = 0.0
             df_train = df_train.append(df_past_skipped, sort=True)
 
-        # cat_cols = ['description']
         cat_cols = ['description', 'title']
 
         df_train.dropna(subset=cat_cols, inplace=True)
@@ -357,12 +350,13 @@ class JobsListLabeler:
             # num_cols = []
 
             self.regressor, self.model_score = \
-                RegTrainer(print_prefix='label: '). \
+                RegTrainer(target_name='label'). \
                     train_regressor(df_train,
                                     cat_cols=cat_cols,
                                     num_cols=num_cols,
                                     y_col='target',
                                     select_cols=False)
+
         else:
             logger.warn(f'Not training label regressor due to '
                         f'having only {len(df_train)} samples')
