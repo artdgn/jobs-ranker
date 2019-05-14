@@ -9,7 +9,7 @@ from utils.logger import logger
 
 
 parser = ArgumentParser()
-parser.add_argument("-t", "--task-json", type=str, required=True,
+parser.add_argument("-t", "--task-json", type=str, default="",
                     help="path to json file or task name with file in the ./data dir "
                          "that contains the task configuration")
 parser.add_argument("-s", "--scrape", action="store_true",

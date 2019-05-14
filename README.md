@@ -55,22 +55,21 @@ and edit the fields:
     - Get your search-url (by going to the job-ads site, using the filters and copying the URL).
     - Edit your positive and negative keywords for the initial ranking.   
 2. (Optional) Run `python scrape_and_label.py --help` to read about the possible flags.
-3. Run `python scrape_and_label.py -t your-task-name --scrape` where `your-task-name`:
+3. Run `python scrape_and_label.py --scrape` and choose or provide your task at 
+the first prompt or run `python scrape_and_label.py -t your-task-name --scrape` 
+where `your-task-name`:
     - is the name of the JSON file 
     - or a path to it if you didn't put it in the `tasks/` folder.
     - or if you're running in docker, put the file itself in `~/jobs_data` folder, 
-and specify the path in the docker container `.. -t ./data/your-task-name.json ..`  
+and specify the path using `-t` flag or on task prompt as `./data/your-task-name.json` 
+(i.e. `./data/` is the mounted volume in the docker container) 
 4. Wait for it to finish scraping and follow the prompts for labeling. 
     - You're shown basic attirbutes (title, age, salary etc..) and the URL, 
     click the URL (or right-click and open).
     - Label `n` for "irrelevant garbage", `y` for "give me more of those" and use floats 
     between 0 and 1 for "it's kinda ok" (e.g `0.1`, `0.5` etc..). 
     - use `recalc` if you've edited keywords in your task file, 
-    or you want to retrain the model on the new labels that you've just added.
-    - there is no undo, so if you want to change any of the labels - 
-    just edit `data/labeled/your-task-name.csv`. (if running in docker, be mindful 
-    that you'll need to `chown` the files or `sudo` edit, because anything created in 
-    docker will be owned by root)
+    or you want to retrain the model on the new labels that you've just added.    
 5. Stop when you've had enough joy for one day. You can resume labeling the same batch by 
 running `python scrape_and_label.py -t your-task-name` (without the `--scrape` flag!). 
 
@@ -79,6 +78,19 @@ Once you're done (or remaining unlabeled jobs are complete garbage) just stop.
 That's it, now just wait for some time for new jobs to be added and run with the `--scrape` flag again 
 to get a new batch. Your labels from previous batches will be used for ranking and all 
 the previous scrapes will be used for deduplication.
+
+#### Undo?
+- Accidental / wrong labels: there is no undo, so if you want to change any of the labels - 
+just edit `data/labeled/your-task-name.csv`.
+- Accidental scrape: if you've set the `-s / --scrape` flag and you didn't 
+mean to, you won't be shown jobs from the previous scrape (which you might still 
+want to label). If this happened, don't worry, you can stop the scrape and 
+remove the last csv file with that day's date from `./data/crawls/your-task-name/` - 
+it's as if it never happened. If you did multiple scrapes on the same day for the same task (how desparate are you?)
+than you don't need to remove it, because all of it will be used to show new jobs.  
+- Docker warning: if running in docker, be mindful 
+that you'll need to `chown` the files or `sudo` edit them, because anything 
+created inside docker will be owned by root.
 
 
 # Possible questions:
