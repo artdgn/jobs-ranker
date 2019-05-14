@@ -23,3 +23,19 @@ CURRENT_DATE = datetime.datetime.now().date().isoformat()
 
 LOG_FILEPATH = os.path.join(LOG_DIR, f'log_{CURRENT_TIMESTAMP}.txt')
 
+
+class MLParams:
+
+   min_model_score = 0.1
+   min_training_samples = 10
+   test_ratio = 0.3
+
+   rf_n_estimators = 100
+   rf_tfidf_ngram_range = (1, 3)
+   rf_tfidf_min_df = 3
+
+   dedup_tfidf_ngram_range = (1, 3)
+   dedup_tfidf_max_df_cutoff = 50
+   dedup_tfidf_max_df_ratio = 0.02
+   dedup_simil_thershold = 0.5
+

@@ -5,6 +5,7 @@ import pandas as pd
 import pandas.errors
 import re
 
+import common
 from joblist.labeled_jobs import LabeledJobs
 from modeling.descriptions_similarity import dedup_by_descriptions_similarity
 from modeling.regression import RegTrainer
@@ -118,7 +119,8 @@ class JobsListLabeler:
 
         self.df_jobs_all = df_jobs.iloc[keep_inds]
 
-        logger.info(f'total historic jobs DF: {len(self.df_jobs_all)} (deduped from {len(df_jobs)})')
+        logger.info(f'total historic jobs DF: {len(self.df_jobs_all)} '
+                    f'(deduped from {len(df_jobs)})')
 
 
     def label_jobs(self, recalc_everytime=False):
@@ -126,7 +128,9 @@ class JobsListLabeler:
         def get_urls_stack():
             return self.df_jobs['url'].tolist()[::-1]
 
-        prompt = 'enter score: y (=1.0) / n (=0.0) / score [0.0 - 1.0] / stop / recalc / skip ? : '
+        prompt = "Rate the job relevance on a scale of 0.0 to 1.0.\n" \
+                 "Score: y (=1.0) / n (=0.0) / score [0.0 - 1.0] / stop / recalc / skip ? : "
+
         not_show_cols = ['description', 'scraped_file', 'salary', 'date'] + \
                         self.intermidiate_score_cols
         urls_stack = get_urls_stack()
@@ -192,7 +196,8 @@ class JobsListLabeler:
 
     @staticmethod
     def _extract_numeric_fields_on_row(row):
-        row['description'] = str(row['description']).lower().replace('\n', ' ').replace('\t', ' ')
+        row['description'] = \
+            str(row['description']).lower().replace('\n', ' ').replace('\t', ' ')
 
         # salary
         sal_str = str(row['salary'])
@@ -226,7 +231,8 @@ class JobsListLabeler:
 
     def _sort_jobs(self, df):
         sort_cols = [self.model_score_col, self.keyword_score_col]
-        if self.model_score is None or self.model_score < 0.1:
+        if self.model_score is None or \
+                self.model_score < common.MLParams.min_model_score:
             sort_cols.reverse()
             logger.info(f'Sorting by keyword-score instead of model-score '
                         f'because model-score = {self.model_score}')
@@ -281,7 +287,7 @@ class JobsListLabeler:
         cat_cols = ['description', 'title']
         df_train.dropna(subset=cat_cols + [target_col], inplace=True)
 
-        if len(df_train) >= 10:
+        if len(df_train) >= common.MLParams.min_training_samples:
             num_cols = [self.keyword_score_col]
             self.regressor_salary, self.reg_sal_model_score = \
                 RegTrainer(print_prefix='salary: '). \
@@ -299,9 +305,19 @@ class JobsListLabeler:
         if self.regressor is None or refit:
             self._train_label_regressor()
 
+        # self.inspect_regressor()
+
         df[self.model_score_col] = (self.regressor.predict(df)
                                     if self.regressor is not None else 0)
         return df
+
+
+    def inspect_regressor(self):
+        import numpy as np
+        n = 20
+        top_n_feat = np.argsort(self.regressor.steps[1][1].feature_importances_)[-n:]
+        feat_names = self.regressor.steps[0][1].get_feature_names()
+        np.array(feat_names)[top_n_feat]
 
 
     def _train_label_regressor(self):
@@ -330,12 +346,13 @@ class JobsListLabeler:
 
         df_train.dropna(subset=cat_cols, inplace=True)
 
-        if len(df_train) >= 10:
+        if len(df_train) >= common.MLParams.min_training_samples:
             df_train = self._extract_numeric_fields(df_train)
             df_train = self._add_keyword_score(df_train)
             df_train = self._add_salary_guess(df_train)
 
-            num_cols = self.intermidiate_score_cols + [self.keyword_score_col, self.salary_guess_col]
+            num_cols = self.intermidiate_score_cols + \
+                       [self.keyword_score_col, self.salary_guess_col]
             # num_cols = self.intermidiate_score_cols + [self.keyword_score_col]
             # num_cols = []
 

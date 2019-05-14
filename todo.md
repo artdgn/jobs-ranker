@@ -1,7 +1,6 @@
 - eng:
-    - docker
-    - refactor config and magic numbers
     - inspect features importance + tfidf tokens for keywords
+    - add individual keywords features
     - GUI - django / jupyter? 
     - tests        
     

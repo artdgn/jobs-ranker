@@ -11,11 +11,11 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer
 
 from utils.logger import logger
-
+import common
 
 class RegTrainer():
 
-    def __init__(self, test_ratio=0.3, print_prefix=''):
+    def __init__(self, test_ratio=common.MLParams.test_ratio, print_prefix=''):
         # self.cat_cols = cat_cols
         # self.num_cols = num_cols
         # self.y_col = y_col
@@ -56,31 +56,38 @@ class RegTrainer():
                 describe(reg.oob_prediction_[y == 1], 'positives'),
                 describe(reg.oob_prediction_[y == 0], 'negatives')])
             logger.info(f"{self.print_prefix}, 'oob scores:\n {oob_scores}")
-        logger.info(f'\n {pd.Series(metrics).to_frame(self.print_prefix).transpose()}')
+        logger.info(
+            f'\n {pd.Series(metrics).to_frame(self.print_prefix).transpose()}')
         return metrics
 
     def exhaustive_column_selection(self, cat_cols, num_cols, x, y, metric):
         res = []
 
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=self.test_ratio)
+        x_train, x_test, y_train, y_test = train_test_split(
+            x, y, test_size=self.test_ratio)
 
         for cols in all_subsets(cat_cols + num_cols):
 
-            pipe, reg = build_RF_pipiline([col for col in cat_cols if col in cols],
-                                          [col for col in num_cols if col in cols])
+            pipe, reg = build_RF_pipiline(
+                [col for col in cat_cols if col in cols],
+                [col for col in num_cols if col in cols])
 
             test_metrics = score_regressor_on_test(
-                pipe, x_train[list(cols)], x_test[list(cols)], y_train, y_test)
+                pipe,
+                x_train[list(cols)], x_test[list(cols)],
+                y_train, y_test)
 
             res.append((test_metrics[metric], cols))
 
-            logger.info(f'selection {test_metrics} {(test_metrics[metric], cols)}')
+            logger.info(
+                f'selection {test_metrics} {(test_metrics[metric], cols)}')
 
         best_cols = sorted(res)[-1][1]
         logger.info(f'best: {best_cols}')
 
-        pipe, reg = build_RF_pipiline([col for col in cat_cols if col in best_cols],
-                                      [col for col in num_cols if col in best_cols])
+        pipe, reg = build_RF_pipiline(
+            [col for col in cat_cols if col in best_cols],
+            [col for col in num_cols if col in best_cols])
         return pipe, reg
 
 
@@ -89,20 +96,43 @@ def all_subsets(arr):
         lambda i: itertools.combinations(arr, i), range(1, len(arr) + 1)))
 
 
+class FunctionTransformerFeatNames(FunctionTransformer):
+
+    def __init__(self, *args, name='', **kwargs):
+        super().__init__(*args, **kwargs)
+        self._name = name
+
+    def get_feature_names(self):
+        return ['func_trans_' + self._name]
+
+
+class PipelineFeatNames(Pipeline):
+
+    def get_feature_names(self):
+        return ['pipeline_' + n for n in self.steps[-1][1].get_feature_names()]
+
 
 def build_RF_pipiline(cat_cols, num_cols):
-    reg = RandomForestRegressor(n_estimators=100, oob_score=True, n_jobs=-1)
+    reg = RandomForestRegressor(
+        n_estimators=common.MLParams.rf_n_estimators, oob_score=True, n_jobs=-1)
 
     def tfidf(col):
-        return Pipeline([
-            ('extract_docs', FunctionTransformer(lambda x: x[col].values, validate=False)),
-            ('tfidf_' + col, TfidfVectorizer(ngram_range=(1,3), min_df=3, stop_words='english'))])
+        return PipelineFeatNames([
+            ('extract_docs', FunctionTransformerFeatNames(
+                lambda x: x[col].values, name=col, validate=False)),
+            ('tfidf_' + col, TfidfVectorizer(
+                ngram_range=common.MLParams.rf_tfidf_ngram_range,
+                min_df=common.MLParams.rf_tfidf_min_df,
+                stop_words='english'))])
 
     def noop(col):
-        return Pipeline([
-            ('noop_' + col, FunctionTransformer(lambda x: x[col].values.reshape(-1, 1), validate=False))])
+        return PipelineFeatNames([
+            ('noop_' + col, FunctionTransformerFeatNames(
+                lambda x: x[col].values.reshape(-1, 1),
+                name=col,
+                validate=False))])
 
-    pipe = Pipeline([
+    pipe = PipelineFeatNames([
         ('transformer', FeatureUnion([
             *(('tfidf_' + col, tfidf(col)) for col in cat_cols),
             *(('noop_' + col, noop(col)) for col in num_cols),

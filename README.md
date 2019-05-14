@@ -35,7 +35,7 @@ and the user is asked to label the relevance.
     Cooccurrence propagation -> Hand-tuned threshold (may not be ideal for your dataset).
 - Salary guess (used as a feature): TFIDF + user keywords score -> RF.
 
-# Installtion:
+# Installation:
 ## Local:
 1. Clone repo.
 2. Go to the repo folder and create your favorite kind of virtual environment 
@@ -77,7 +77,7 @@ running `python scrape_and_label.py -t your-task-name` (without the `--scrape` f
 Once you're done (or remaining unlabeled jobs are complete garbage) just stop.
 
 That's it, now just wait for some time for new jobs to be added and run with the `--scrape` flag again 
-to get a new batch. Your labels from previous batches with be used for ranking and all 
+to get a new batch. Your labels from previous batches will be used for ranking and all 
 the previous scrapes will be used for deduplication.
 
 
