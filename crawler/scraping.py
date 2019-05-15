@@ -3,6 +3,7 @@ import os
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
+import crawler.settings
 from crawler.jora_scraper import get_jora_spider_for_url
 
 from tasks.config import TaskConfig
@@ -17,6 +18,7 @@ def start_scraping(task_config: TaskConfig, http_cache=False):
     crawl_name = f'jora-{common.CURRENT_DATE}'
     crawl_output = os.path.join(task_config.crawls_dir, f'{crawl_name}.csv')
 
+    os.environ['SCRAPY_SETTINGS_MODULE'] = crawler.settings.__name__
     settings = get_project_settings()
     settings.set('FEED_FORMAT', 'csv', priority='cmdline')
     settings.set('FEED_URI', crawl_output, priority='cmdline')

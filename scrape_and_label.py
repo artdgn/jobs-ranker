@@ -1,7 +1,7 @@
 import os
 from argparse import ArgumentParser
 
-from crawler.scaping import start_scraping
+from crawler.scraping import start_scraping
 from joblist.joblist_processing import JobsListLabeler
 
 from tasks.config import get_task_config

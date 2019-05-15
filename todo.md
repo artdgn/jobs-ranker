@@ -1,6 +1,7 @@
 - eng:
-    - inspect features importance + tfidf tokens for keywords
-    - add individual keywords features
+    - add avg label score for no-dedup
+	- add individual keywords features
+    - control+view from logic    
     - GUI - django / jupyter? 
     - tests        
     

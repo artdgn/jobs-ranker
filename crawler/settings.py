@@ -11,8 +11,8 @@
 
 BOT_NAME = 'crawler'
 
-# SPIDER_MODULES = ['jora_scraper']
-# NEWSPIDER_MODULE = 'jora_scraper'
+SPIDER_MODULES = ['crawler.jora_scraper']
+NEWSPIDER_MODULE = 'crawler.jora_scraper'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent

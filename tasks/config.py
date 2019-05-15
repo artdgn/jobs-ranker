@@ -43,7 +43,7 @@ def user_input_task_config():
         [f"\t{i}: {s}" for i, s in zip(range(len(tasks)), tasks)])
     prompt = \
         f'Found these tasks in the ./tasks/ folder:\n{numbered_tasks_list}\n' \
-        f'Choose an option number ur provide exact path to another task: '
+        f'Choose an option number or provide exact path to another task: '
 
     resp = input(prompt)
 
