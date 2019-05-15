@@ -1,3 +1,4 @@
+import itertools
 from collections import defaultdict
 
 import numpy as np
@@ -40,7 +41,8 @@ def duplicates_by_tfidf_cosine(strings):
     vecs = tf.fit_transform(strings)
     simil_mat = cosine_similarity(vecs)
     simil_mat -= np.eye(*simil_mat.shape)
-    dup_i, dup_j = np.where(simil_mat > common.MLParams.dedup_simil_thershold)
+    threshold = common.MLParams.dedup_simil_thershold
+    dup_i, dup_j = np.where(simil_mat > threshold)
     return dup_i, dup_j
 
 
@@ -54,15 +56,18 @@ def inspect_simil_threshold(strings, simil_mat, threshold):
 
 def print_side_by_side(a, b, size=100):
 
-    def seek(s, ind):
-        for offset in range(1, size):
-            if ind + offset >= len(s) or s[ind + offset] == '\n':
-                return s[ind:ind + offset], ind + offset + 1
-        else:
-            return s[ind:ind + size], ind + size
+    def buffer_gen(s):
+        ind = 0
+        while ind < len(s):
+            offset = 0
+            while offset < size and ind + offset < len(s) \
+                    and s[ind + offset] != '\n':
+                offset += 1
+            yield s[ind:ind + offset]
+            while ind + offset < len(s) and s[ind + offset] in ['\n', '']:
+                offset += 1
+            ind += offset
 
-    i, j = 0, 0
-    while i < len(a) and j < len(b):
-        buff_a, i = seek(a, i)
-        buff_b, j = seek(b, j)
-        print(buff_a.ljust(size) + '  |  ' + buff_b)
+    for a_buff, b_buff in itertools.zip_longest(
+            buffer_gen(a), buffer_gen(b), fillvalue=''):
+        print(a_buff.ljust(size) + '  |  ' + b_buff)
