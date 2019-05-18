@@ -103,7 +103,8 @@ class JobsRanker:
                     f'(deduped from {len(df_jobs)})')
 
     def displayable_job_by_url(self, url):
-        not_show_cols = (['description', 'scraped_file', 'salary', 'date'] +
+        not_show_cols = (['description', 'description_length',
+                          'scraped_file', 'salary', 'date'] +
                          self.intermidiate_score_cols)
         row = self.df_jobs.loc[self.df_jobs['url'] == url].iloc[0]
         return row.drop(not_show_cols).dropna()
@@ -118,6 +119,7 @@ class JobsRanker:
                            replace(self.neg_label, '0.0'))
             if not 0 <= number <= 1:
                 raise ValueError
+            return True
 
         except ValueError:
             logger.error(f'Invalid input : {label}')
