@@ -5,7 +5,6 @@ from common import LABELED_ROOT_DIR
 
 
 class LabeledJobs:
-
     url_col = 'url'
     label_col = 'label'
 

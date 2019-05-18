@@ -1,3 +1,4 @@
 scrapy
 scikit-learn
+numpy
 pandas

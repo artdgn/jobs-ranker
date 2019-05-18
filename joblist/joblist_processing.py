@@ -15,7 +15,6 @@ from utils.logger import logger
 
 
 class JobsListLabeler:
-
     keyword_score_col = 'keyword_score'
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
@@ -47,7 +46,6 @@ class JobsListLabeler:
         self._pandas_console_options()
         self._load_and_process_data()
 
-
     def _load_and_process_data(self):
         self._read_all_scraped()
         self._read_labeled()
@@ -56,47 +54,42 @@ class JobsListLabeler:
             self._read_task_config()
             self._process_df()
 
-
     def _recalc(self):
         self._read_task_config()
         self._process_df()
 
-
     def _read_task_config(self):
         self.task_config = get_task_config(self.task_config.name)
 
-
     def _read_labeled(self):
         self.labels_dao = LabeledJobs(task_name=self.task_config.name,
-                                      dup_dict = self.dup_dict)
+                                      dup_dict=self.dup_dict)
         logger.info(f'total labeled jobs DF: {len(self.labels_dao.df)}')
 
-
-    def _read_scrapy_file(self, filename):
+    @staticmethod
+    def _read_scrapy_file(filename):
         try:
             df = pd.read_csv(filename)
-        except pandas.errors.EmptyDataError as e:
+        except pandas.errors.EmptyDataError:
             logger.info(f'found empty scrape file:{filename}. trying to delete.')
             os.remove(filename)
             return pd.DataFrame()
         else:
-            drop_cols = [col for col in df.columns if col.startswith('download_')] + \
-                        ['depth']
+            drop_cols = ([col for col in df.columns if col.startswith('download_')] +
+                         ['depth'])
             df.drop(drop_cols, axis=1, inplace=True)
             df['scraped_file'] = filename
             return df
-
 
     def _read_last_scraped(self, dedup=True):
         if not dedup:
             self.df_jobs = self._read_scrapy_file(self.scraped_source)
             self._add_duplicates_column()
         else:
-            self.df_jobs = self.df_jobs_all.\
+            self.df_jobs = self.df_jobs_all. \
                                loc[self.df_jobs_all['scraped_file'] == self.scraped_source, :]
         logger.info(f'most recent scrape DF: {len(self.df_jobs)} ({self.scraped_source}, '
                     f'all scraped: {len(self._read_scrapy_file(self.scraped_source))})')
-
 
     def _add_duplicates_column(self):
         dup_no_self = {k: [u for u in v if u != k]
@@ -109,13 +102,12 @@ class JobsListLabeler:
         })
         self.df_jobs = pd.merge(self.df_jobs, df_dups, on='url', how='left')
 
-
     def _read_all_scraped(self):
         files = list(self.older_scraped) + [self.scraped_source]
 
         df_jobs = pd.concat(
             [self._read_scrapy_file(file) for file in files], axis=0). \
-            drop_duplicates(subset=['url']).\
+            drop_duplicates(subset=['url']). \
             dropna(subset=['description'])
 
         keep_inds, dup_dict_inds = dedup_by_descriptions_similarity(
@@ -130,17 +122,16 @@ class JobsListLabeler:
         logger.info(f'total historic jobs DF: {len(self.df_jobs_all)} '
                     f'(deduped from {len(df_jobs)})')
 
-
     def label_jobs(self, recalc_everytime=False):
 
         def get_urls_stack():
             return self.df_jobs['url'].tolist()[::-1]
 
-        prompt = "Rate the job relevance on a scale of 0.0 to 1.0, or use 'y' for yes or 'n' for no.\n" \
-                 "Input ( y / n / number / stop / recalc / skip ): "
+        prompt = ("Rate the job relevance on a scale of 0.0 to 1.0, or use 'y' for yes or 'n' for no.\n"
+                  "Input ( y / n / number / stop / recalc / skip ): ")
 
-        not_show_cols = ['description', 'scraped_file', 'salary', 'date'] + \
-                        self.intermidiate_score_cols
+        not_show_cols = (['description', 'scraped_file', 'salary', 'date'] +
+                         self.intermidiate_score_cols)
         urls_stack = get_urls_stack()
         skipped = set()
         while len(urls_stack):
@@ -149,7 +140,7 @@ class JobsListLabeler:
 
             if (not self.labels_dao.labeled(url)) and not (url in skipped):
 
-                row = self.df_jobs.loc[self.df_jobs['url']==url].iloc[0]. \
+                row = self.df_jobs.loc[self.df_jobs['url'] == url].iloc[0]. \
                     drop(not_show_cols).dropna()
 
                 print(str(row))
@@ -182,13 +173,12 @@ class JobsListLabeler:
                         'Try turning dedup off to go over duplicates. '
                         'run with --help flag for more info')
 
-
     def _is_valid_input(self, label: str):
         try:
             if label not in self.control_tokens:
                 number = float(label.
-                              replace(self.pos_label, '1.0').
-                              replace(self.neg_label, '0.0'))
+                               replace(self.pos_label, '1.0').
+                               replace(self.neg_label, '0.0'))
                 if not 0 <= number <= 1:
                     raise ValueError
             return True
@@ -197,14 +187,12 @@ class JobsListLabeler:
             logger.error(f'Invalid input : {label}')
             return False
 
-
     @staticmethod
     def _pandas_console_options():
         pd.set_option('display.max_colwidth', 300)
         pd.set_option('display.max_rows', None)
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', 1000)
-
 
     @staticmethod
     def _extract_numeric_fields_on_row(row):
@@ -227,11 +215,9 @@ class JobsListLabeler:
             row['days_age'] = int(int(date_nums[0]) * date_mult)
         return row
 
-
     def _extract_numeric_fields(self, df):
         df = df.apply(self._extract_numeric_fields_on_row, axis=1)
         return df
-
 
     def _process_df(self):
         self.df_jobs = self._extract_numeric_fields(self.df_jobs)
@@ -239,7 +225,6 @@ class JobsListLabeler:
         self.df_jobs = self._add_salary_guess(self.df_jobs)
         self.df_jobs = self._add_model_score(self.df_jobs)
         self.df_jobs = self._sort_jobs(self.df_jobs)
-
 
     def _sort_jobs(self, df):
         sort_cols = [self.model_score_col, self.keyword_score_col]
@@ -251,7 +236,6 @@ class JobsListLabeler:
         logger.info(f'Sorting by columns: {sort_cols}')
         df.sort_values(sort_cols, ascending=False, inplace=True)
         return df
-
 
     def _add_keyword_score(self, df):
 
@@ -276,7 +260,6 @@ class JobsListLabeler:
             1 / df.title_negative_count.rank(ascending=False)
         return df
 
-
     def _add_salary_guess(self, df, refit=False):
 
         if self.regressor_salary is None or refit:
@@ -286,7 +269,6 @@ class JobsListLabeler:
                                      if self.regressor_salary else 0)
 
         return df
-
 
     def _train_salary_regressor(self):
         df_train = self.df_jobs_all.copy()
@@ -301,17 +283,16 @@ class JobsListLabeler:
 
         if len(df_train) >= common.MLParams.min_training_samples:
             num_cols = [self.keyword_score_col]
-            self.regressor_salary, self.reg_sal_model_score = \
-                RegTrainer(target_name='salary'). \
-                    train_regressor(df_train,
-                                    cat_cols=cat_cols,
-                                    num_cols=num_cols,
-                                    y_col=target_col,
-                                    select_cols=False)
+            trainer = RegTrainer(target_name='salary')
+            self.regressor_salary, self.reg_sal_model_score = (
+                trainer.train_regressor(df_train,
+                                        cat_cols=cat_cols,
+                                        num_cols=num_cols,
+                                        y_col=target_col,
+                                        select_cols=False))
         else:
             logger.warn(f'Not training salary regressor due to '
                         f'having only {len(df_train)} samples')
-
 
     def _add_model_score(self, df, refit=True):
         if self.regressor is None or refit:
@@ -320,7 +301,6 @@ class JobsListLabeler:
         df[self.model_score_col] = (self.regressor.predict(df)
                                     if self.regressor is not None else 0)
         return df
-
 
     def _train_label_regressor(self):
         df_jobs_all = self.df_jobs_all.copy()
@@ -352,21 +332,19 @@ class JobsListLabeler:
             df_train = self._add_keyword_score(df_train)
             df_train = self._add_salary_guess(df_train)
 
-            num_cols = self.intermidiate_score_cols + \
-                       [self.keyword_score_col, self.salary_guess_col]
+            num_cols = (self.intermidiate_score_cols +
+                        [self.keyword_score_col, self.salary_guess_col])
             # num_cols = self.intermidiate_score_cols + [self.keyword_score_col]
             # num_cols = []
 
-            self.regressor, self.model_score = \
-                RegTrainer(target_name='label'). \
-                    train_regressor(df_train,
-                                    cat_cols=cat_cols,
-                                    num_cols=num_cols,
-                                    y_col='target',
-                                    select_cols=False)
+            trainer = RegTrainer(target_name='label')
+            self.regressor, self.model_score = (
+                trainer.train_regressor(df_train,
+                                        cat_cols=cat_cols,
+                                        num_cols=num_cols,
+                                        y_col='target',
+                                        select_cols=False))
 
         else:
             logger.warn(f'Not training label regressor due to '
                         f'having only {len(df_train)} samples')
-
-

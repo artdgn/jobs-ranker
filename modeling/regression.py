@@ -15,7 +15,7 @@ from utils.logger import logger
 import common
 
 
-class RegTrainer():
+class RegTrainer:
 
     def __init__(self, test_ratio=common.MLParams.test_ratio, target_name=''):
         # self.cat_cols = cat_cols
@@ -53,7 +53,6 @@ class RegTrainer():
 
         return rf_pipe.pipe, model_score
 
-
     def exhaustive_column_selection(self, cat_cols, num_cols, x, y, metric):
         res = []
 
@@ -61,7 +60,6 @@ class RegTrainer():
             x, y, test_size=self.test_ratio)
 
         for cols in all_subsets(cat_cols + num_cols):
-
             rf_pipe = RFPipeline(
                 [col for col in cat_cols if col in cols],
                 [col for col in num_cols if col in cols])
@@ -107,19 +105,17 @@ class PipelineFeatNames(Pipeline):
 class RFPipeline:
 
     def __init__(self, cat_cols, num_cols):
-
         self.rf = RandomForestRegressor(
             n_estimators=common.MLParams.rf_n_estimators, oob_score=True, n_jobs=-1)
 
         self.transformer = FeatureUnion([
-                *(('tfidf_' + col, self._tfidf_pipe(col)) for col in cat_cols),
-                *(('noop_' + col, self._noop_pipe(col)) for col in num_cols),
-            ])
+            *(('tfidf_' + col, self._tfidf_pipe(col)) for col in cat_cols),
+            *(('noop_' + col, self._noop_pipe(col)) for col in num_cols),
+        ])
 
         self.pipe = PipelineFeatNames([
             ('transformer', self.transformer),
             ('regressor', self.rf)])
-
 
     @staticmethod
     def _tfidf_pipe(col):
@@ -131,7 +127,6 @@ class RFPipeline:
                 min_df=common.MLParams.rf_tfidf_min_df,
                 stop_words='english'))])
 
-
     @staticmethod
     def _noop_pipe(col):
         return PipelineFeatNames([
@@ -140,9 +135,7 @@ class RFPipeline:
                 name=col,
                 validate=False))])
 
-
     def print_top_n_features(self, x, y, n=30, target_name=''):
-
         # names
         top_n_feat = np.argsort(self.rf.feature_importances_)[-n:]
         feat_names = self.transformer.get_feature_names()
@@ -157,23 +150,25 @@ class RFPipeline:
             {'name': top_names, 'correlation': cors_vec}). \
             sort_values('correlation', ascending=False)
 
-        logger.info(f'Top {n} informative features and correlations to {target_name}: \n{df}')
-
+        logger.info(f'Top {n} informative features and correlations to '
+                    f'{target_name}: \n{df}')
 
     def score_regressor_on_test(self, x_train, x_test, y_train, y_test):
         self.pipe.fit(x_train, y_train)
         y_pred = self.pipe.predict(x_test)
         return score_metrics(y_test, y_pred)
 
+    @staticmethod
+    def describe_vec(vec, name):
+        return pd.Series(vec).describe().to_frame(name).transpose()
 
     def score_and_print_reg_report(self, y, target_name=''):
         y_pred = self.rf.oob_prediction_
         metrics = score_metrics(y, y_pred)
-        describe = lambda vec, name: pd.Series(vec).describe().to_frame(name).transpose()
         if is_binary_target(y):
             oob_scores = pd.concat([
-                describe(self.rf.oob_prediction_[y == 1], 'positives'),
-                describe(self.rf.oob_prediction_[y == 0], 'negatives')])
+                self.describe_vec(self.rf.oob_prediction_[y == 1], 'positives'),
+                self.describe_vec(self.rf.oob_prediction_[y == 0], 'negatives')])
             logger.info(f"{target_name}, oob scores:\n {oob_scores}")
         logger.info(
             f"\n {pd.Series(metrics).to_frame(f'{target_name} :').transpose()}")

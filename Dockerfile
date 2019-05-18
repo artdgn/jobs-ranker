@@ -17,4 +17,4 @@ CMD ["--help"]
 
 # docker build --pull -t artdgn/jobs_recommender .
 # docker push artdgn/jobs_recommender
-# docker run --rm -it -v $(realpath ./data):/jobs_recommender/data artdgn/jobs_recommender -t example-task
+# docker run --rm -it -v $(realpath ./data):/jobs_recommender/data artdgn/jobs_recommender --help

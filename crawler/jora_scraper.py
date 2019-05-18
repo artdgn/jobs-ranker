@@ -1,7 +1,7 @@
 import scrapy
 
 
-class _JoraSpider(scrapy.Spider):
+class _JoraBaseSpider(scrapy.Spider):
     name = "toscrape-css"
     start_urls = []
     base_url = 'https://au.jora.com'
@@ -35,5 +35,8 @@ class _JoraSpider(scrapy.Spider):
 
 
 def get_jora_spider_for_url(search_url):
-    _JoraSpider.start_urls.append(search_url)
-    return _JoraSpider
+
+    class SpecificSpider(_JoraBaseSpider):
+        start_urls = [search_url]
+
+    return SpecificSpider

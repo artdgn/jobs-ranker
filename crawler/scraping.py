@@ -13,7 +13,7 @@ import common
 
 def start_scraping(task_config: TaskConfig, http_cache=False):
     log_path = os.path.join(task_config.scrapy_log_dir,
-        f'log-{common.CURRENT_TIMESTAMP}.log')
+                            f'log-{common.CURRENT_TIMESTAMP}.log')
 
     crawl_name = f'jora-{common.CURRENT_DATE}'
     crawl_output = os.path.join(task_config.crawls_dir, f'{crawl_name}.csv')
