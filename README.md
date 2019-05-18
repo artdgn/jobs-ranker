@@ -95,10 +95,14 @@ created inside docker will be owned by root.
 
 # Possible questions:
 1. Q: Other job sites? 
-A: You'll need to create a different scraper object and tune the scraping to suit that site.
+A: You'll need to create a different scraper object and tune the scraping to suit that site. 
+Refer to the [scrapy docs](https://docs.scrapy.org/en/latest/) 
+and [selector gadget](https://selectorgadget.com/)
 2. Q: Why not Deep Learning, where's ELMO and BERT? A: The main goal was to simplify job seeking 
 for myself. Also my guess is that there is little 
 to gain from sophsticated models because for the initial relevance task a job-ad is 
 often just a collection of important keywords embedded in unimportant sentences and paragraphs. 
 The actual "apply" decision task requires much more personal context, world-knowledge, 
 and good old brain thinking for it be an easy task to solve with ML.       
+3. Q: Your modeling approach / code is stupid and it sucks.. A: Any ideas, 
+suggestions, collaborataion, etc are welcome (also, there's a todo.md file with possible ideas)  

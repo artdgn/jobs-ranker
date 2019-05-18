@@ -1,7 +1,5 @@
 - eng:
     - add avg label score for no-dedup
-	- refactor job-list god object
-    - control+view from logic    
     - GUI - django / jupyter? 
     - tests        
     
@@ -14,7 +12,7 @@
         - only use NER words
         - w2v / sent2vec
         - self-supervision (title prediction) pretraining
-    - experiement with ways to handle the imbalance (weights for regression?)    
+    - try some imbalance handling techniques    
     - separate tuning and refitting
     
 - data:
