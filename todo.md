@@ -1,5 +1,6 @@
 - eng:
-    - add avg label score for no-dedup
+    - display closest labeled dup for each + simil score + label 
+    - refactor dups   
     - GUI - django / jupyter? 
     - tests        
     

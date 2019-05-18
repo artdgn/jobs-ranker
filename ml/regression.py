@@ -15,6 +15,11 @@ from utils.logger import logger
 import common
 
 
+SPEARMAN = 'spearman'
+R2 = 'r2'
+MAIN_METRIC = SPEARMAN
+
+
 class RegressorTrainer:
 
     def __init__(self, test_ratio=common.MLParams.test_ratio, target_name=''):
@@ -34,11 +39,9 @@ class RegressorTrainer:
 
         rf_pipe = RFPipeline(cat_cols, num_cols)
 
-        metric = 'apr' if is_binary_target(y) else 'r2'
-
         if select_cols:
             rf_pipe = self.exhaustive_column_selection(
-                cat_cols=cat_cols, num_cols=num_cols, x=x, y=y, metric=metric)
+                cat_cols=cat_cols, num_cols=num_cols, x=x, y=y, metric=MAIN_METRIC)
 
         # refit
         rf_pipe.pipe.fit(x, y)
@@ -49,7 +52,7 @@ class RegressorTrainer:
         rf_pipe.print_top_n_features(
             x, y, n=common.InfoParams.top_n_feat, target_name=self.target_name)
 
-        model_score = metrics[metric]
+        model_score = metrics[MAIN_METRIC]
 
         return rf_pipe.pipe, model_score
 
@@ -181,8 +184,8 @@ def is_binary_target(y):
 
 def score_metrics(y_true, y_pred):
     metrics = {
-        'r2': r2_score(y_true, y_pred),
-        'spearman': scipy.stats.spearmanr(y_true, y_pred)[0]}
+        R2: r2_score(y_true, y_pred),
+        SPEARMAN: scipy.stats.spearmanr(y_true, y_pred)[0]}
     if is_binary_target(y_true):
         metrics['auc'] = roc_auc_score(y_true, y_pred)
         metrics['apr'] = average_precision_score(y_true, y_pred)

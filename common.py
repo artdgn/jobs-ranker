@@ -23,7 +23,6 @@ LOG_FILEPATH = os.path.join(LOG_DIR, f'log_{CURRENT_TIMESTAMP}.txt')
 
 
 class MLParams:
-    min_model_score = 0.05
     min_training_samples = 10
     test_ratio = 0.3
 

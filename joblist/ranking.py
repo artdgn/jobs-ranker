@@ -7,7 +7,7 @@ import common
 from crawler.scraping import read_scrapy_file
 from joblist.labeled import LabeledJobs
 from ml.descriptions_similarity import dedup_by_descriptions_similarity
-from ml.regression import RegressorTrainer
+import ml.regression
 from tasks.config import get_task_config, TaskConfig
 
 from utils.logger import logger
@@ -17,6 +17,7 @@ class JobsRanker:
     keyword_score_col = 'keyword_score'
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
+    target_col = 'target'
     pos_label = 'y'
     neg_label = 'n'
 
@@ -34,6 +35,7 @@ class JobsRanker:
         self.skipped_as_negatives = skipped_as_negatives
         self.regressor = None
         self.model_score = None
+        self.keyword_score = None
         self.regressor_salary = None
         self.reg_sal_model_score = None
         self.intermidiate_score_cols = []
@@ -134,11 +136,11 @@ class JobsRanker:
 
     def _sort_jobs(self, df):
         sort_cols = [self.model_score_col, self.keyword_score_col]
-        if self.model_score is None or \
-                self.model_score < common.MLParams.min_model_score:
+        if self.model_score < self.keyword_score:
             sort_cols.reverse()
             logger.info(f'Sorting by keyword-score instead of model-score '
-                        f'because model-score = {self.model_score}')
+                        f'because model-score = {self.model_score}, '
+                        f'keyword-score = {self.keyword_score}')
         logger.info(f'Sorting by columns: {sort_cols}')
         df.sort_values(sort_cols, ascending=False, inplace=True)
         return df
@@ -197,7 +199,7 @@ class JobsRanker:
 
         if len(df_train) >= common.MLParams.min_training_samples:
             num_cols = [self.keyword_score_col]
-            trainer = RegressorTrainer(target_name='salary')
+            trainer = ml.regression.RegressorTrainer(target_name='salary')
             self.regressor_salary, self.reg_sal_model_score = (
                 trainer.train_regressor(df_train,
                                         cat_cols=cat_cols,
@@ -232,7 +234,7 @@ class JobsRanker:
         df_train = labels_df.set_index('url'). \
             join(df_jobs_all.set_index('url'), how='left')
 
-        df_train['target'] = df_train['label']. \
+        df_train[self.target_col] = df_train['label']. \
             replace(self.pos_label, '1.0'). \
             replace(self.neg_label, '0.0'). \
             astype(float)
@@ -242,7 +244,7 @@ class JobsRanker:
                               ~df_jobs_all.url.isin(
                                   df_train.reset_index()['url'].tolist() +
                                   self.df_jobs['url'].tolist()), :].copy()
-            df_past_skipped.loc[:, 'target'] = 0.0
+            df_past_skipped.loc[:, self.target_col] = 0.0
             df_train = df_train.append(df_past_skipped, sort=True)
 
         return df_train
@@ -261,14 +263,17 @@ class JobsRanker:
             num_cols = (self.intermidiate_score_cols +
                         [self.keyword_score_col, self.salary_guess_col])
 
-            trainer = RegressorTrainer(target_name='label')
+            trainer = ml.regression.RegressorTrainer(target_name='label')
             self.regressor, self.model_score = (
                 trainer.train_regressor(df_train,
                                         cat_cols=cat_cols,
                                         num_cols=num_cols,
-                                        y_col='target',
+                                        y_col=self.target_col,
                                         select_cols=False))
 
+            keyword_metrics = ml.regression.score_metrics(
+                df_train[self.keyword_score_col], df_train[self.target_col])
+            self.keyword_score = keyword_metrics[ml.regression.MAIN_METRIC]
         else:
             logger.warn(f'Not training label regressor due to '
                         f'having only {len(df_train)} samples')
