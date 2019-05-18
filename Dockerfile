@@ -15,6 +15,6 @@ ENTRYPOINT ["python", "scrape_and_label.py"]
 
 CMD ["--help"]
 
-# docker build --pull -t artdgn/job_scraping .
-# docker push artdgn/job_scraping
-# docker run --rm -it -v $(realpath ./data):/job_scraping/data artdgn/job_scraping -t example-task
+# docker build --pull -t artdgn/jobs_recommender .
+# docker push artdgn/jobs_recommender
+# docker run --rm -it -v $(realpath ./data):/jobs_recommender/data artdgn/jobs_recommender -t example-task

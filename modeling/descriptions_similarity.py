@@ -9,7 +9,7 @@ from utils.logger import logger
 import common
 
 
-def dedup_by_descriptions_similarity(strings, keep='first'):
+def dedup_by_descriptions_similarity(strings, keep=common.MLParams.dedup_keep):
 
     dup_i, dup_j = duplicates_by_tfidf_cosine(strings)
 

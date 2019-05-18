@@ -1,5 +1,5 @@
 # What : 
-Scraper + Interactive "online learner" + De-duplicator for filtering job-ads.
+Job-ads Scraper + Relevance "online learner" / recommender + De-duplicator.
 
 # Why: 
 Job-ads are long and confusing and contain too little signal to noise (at least in Australia): 
@@ -45,7 +45,7 @@ and the user is asked to label the relevance.
 ## Docker:
 1. Make a folder for persisting your data between the scraping runs. E.g. `~/jobs_data`
 2. In the instructions below instead of running `python scrape_and_label.py ...` 
-run `docker run --rm -it -v $(realpath ./data):/job_scraping/data artdgn/job_scraping ...` 
+run `docker run --rm -it -v $(realpath ./data):/jobs_recommender/data artdgn/jobs_recommender ...` 
 
 # Running
 

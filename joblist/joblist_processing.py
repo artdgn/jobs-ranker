@@ -27,8 +27,11 @@ class JobsListLabeler:
     control_tokens = [skip_token, stop_token, recalc_token]
 
     def __init__(self, scraped, task_config: TaskConfig,
-                 older_scraped=(), dedup_new=True,
-                 dup_keep='first', skipped_as_negatives=True):
+                 older_scraped=(),
+                 dedup_new=True,
+                 dup_keep=common.MLParams.dedup_keep,
+                 skipped_as_negatives=True
+                 ):
         self.scraped_source = scraped
         self.task_config = task_config
         self.older_scraped = older_scraped
@@ -96,9 +99,14 @@ class JobsListLabeler:
 
 
     def _add_duplicates_column(self):
-        dup_no_self = {k: [u for u in v if u != k] for k, v in self.dup_dict.items()}
-        df_dups = pd.DataFrame({'url': list(dup_no_self.keys()),
-                                'duplicates': list(dup_no_self.values())})
+        dup_no_self = {k: [u for u in v if u != k]
+                       for k, v in self.dup_dict.items()}
+        dups_lists = [(l if l else None) for l in list(dup_no_self.values())]
+        df_dups = pd.DataFrame({
+            'url': list(dup_no_self.keys()),
+            'duplicates': dups_lists,
+            # 'duplicates_avg_label':
+        })
         self.df_jobs = pd.merge(self.df_jobs, df_dups, on='url', how='left')
 
 
