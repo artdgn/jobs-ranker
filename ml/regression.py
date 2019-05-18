@@ -15,7 +15,7 @@ from utils.logger import logger
 import common
 
 
-class RegTrainer:
+class RegressorTrainer:
 
     def __init__(self, test_ratio=common.MLParams.test_ratio, target_name=''):
         # self.cat_cols = cat_cols

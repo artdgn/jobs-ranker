@@ -1,6 +1,6 @@
 - eng:
     - add avg label score for no-dedup
-	- add individual keywords features
+	- refactor job-list god object
     - control+view from logic    
     - GUI - django / jupyter? 
     - tests        

@@ -4,9 +4,9 @@ import os
 from argparse import ArgumentParser
 
 from crawler.scraping import start_scraping
-from joblist.joblist_processing import JobsListLabeler
+from joblist.ranking import JobsRanker
+from input.text import load_or_choose_task, label_jobs
 
-from tasks.config import get_task_config
 from utils.logger import logger
 
 
@@ -33,27 +33,25 @@ def main():
 
     os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
-    task_config = get_task_config(task_name=args.task_json)
+    task_config = load_or_choose_task(task_name=args.task_json)
 
     if args.scrape:
-        s_proc, scrape_log = start_scraping(task_config=task_config,
-                                            http_cache=args.http_cache)
-        logger.info(f'Started scraping, waiting for results... '
-                    f'check log file at {scrape_log}')
-        s_proc.join()
+        start_scraping(task_config=task_config,
+                       http_cache=args.http_cache,
+                       blocking=True)
 
     crawls = [os.path.join(task_config.crawls_dir, f)
               for f in sorted(os.listdir(task_config.crawls_dir))]
 
     if crawls:
-        jobs = JobsListLabeler(
+        jobs = JobsRanker(
             scraped=crawls.pop(),
             task_config=task_config,
             older_scraped=crawls,
             dedup_new=(not args.no_dedup),
             skipped_as_negatives=args.assume_negative)
 
-        jobs.label_jobs(recalc_everytime=args.recalc)
+        label_jobs(joblist=jobs, recalc_everytime=args.recalc)
 
     else:
         logger.info('No scraped jobs found, please run scraping before '

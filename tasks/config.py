@@ -1,62 +1,32 @@
 import os
 import json
 
-import sys
-
-from utils.logger import logger
-
 import common
 
 TASKS_DIR = os.path.realpath(os.path.dirname(__file__))
 
 
-def task_dir_tasks():
+def tasks_in_scope():
     return [f.split('.json')[0]
             for f in os.listdir(TASKS_DIR) if '.json' in f]
 
 
-def get_task_config(task_name: str = ''):
+def get_task_config(task_name: str):
     path = task_name
-    if os.path.sep not in path:
-        path = os.path.join(TASKS_DIR, task_name)
-    if not path.endswith('.json'):
-        path += '.json'
-
-    try:
-        with open(path, 'rt') as f:
-            task = TaskConfig()
-            data = json.load(f)
-            data['name'] = os.path.splitext(os.path.split(path)[1])[0]
-            task.update(data)
-            return task
-
-    except FileNotFoundError:
-        return get_task_config(user_input_task_config())
-
-
-def user_input_task_config():
-    tasks = task_dir_tasks()
-    tasks.append('.. cancel and exit')
-
-    numbered_tasks_list = "\n".join(
-        [f"\t{i}: {s}" for i, s in zip(range(len(tasks)), tasks)])
-    prompt = (f'Found these tasks in the ./tasks/ folder:'
-              f'\n{numbered_tasks_list}\n'
-              f'Choose an option number or provide exact path to another task: ')
-
-    resp = input(prompt)
-
-    # parse input
-    try:
-        option_number = int(resp)
-        if option_number == len(tasks) - 1:
-            sys.exit()
-        elif 0 <= option_number < len(tasks) - 1:
-            return tasks[option_number]
-    except ValueError:
+    if os.path.exists(path):
         pass
+    else:
+        if os.path.sep not in path:
+            path = os.path.join(TASKS_DIR, task_name)
+        if not path.endswith('.json'):
+            path += '.json'
 
-    return resp
+    with open(path, 'rt') as f:
+        task = TaskConfig()
+        data = json.load(f)
+        data['name'] = os.path.splitext(os.path.split(path)[1])[0]
+        task.update(data)
+        return task
 
 
 class TaskConfig(dict):

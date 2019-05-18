@@ -1,5 +1,8 @@
 import os
 
+import pandas as pd
+import pandas.errors
+
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
@@ -9,9 +12,10 @@ from crawler.jora_scraper import get_jora_spider_for_url
 from tasks.config import TaskConfig
 
 import common
+from utils.logger import logger
 
 
-def start_scraping(task_config: TaskConfig, http_cache=False):
+def start_scraping(task_config: TaskConfig, http_cache=False, blocking=True):
     log_path = os.path.join(task_config.scrapy_log_dir,
                             f'log-{common.CURRENT_TIMESTAMP}.log')
 
@@ -31,4 +35,25 @@ def start_scraping(task_config: TaskConfig, http_cache=False):
     process = CrawlerProcess(settings)
     process.crawl(get_jora_spider_for_url(search_url=task_config.search_url))
     process.start()
-    return process, log_path
+
+    if blocking:
+        logger.info(f'Started scraping, waiting for results... '
+                    f'check log file at {log_path}')
+        process.join()
+    else:
+        return process
+
+
+def read_scrapy_file(filename):
+    try:
+        df = pd.read_csv(filename)
+    except pandas.errors.EmptyDataError:
+        logger.info(f'found empty scrape file:{filename}. trying to delete.')
+        os.remove(filename)
+        return pd.DataFrame()
+    else:
+        drop_cols = ([col for col in df.columns if col.startswith('download_')]
+                     + ['depth'])
+        df.drop(drop_cols, axis=1, inplace=True)
+        df['scraped_file'] = filename
+        return df
