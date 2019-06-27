@@ -1,3 +1,4 @@
+import abc
 from itertools import product
 
 import pandas as pd
@@ -14,25 +15,31 @@ from tasks.dao import TasksDao
 from utils.logger import logger
 
 
-class RankerAPI:
+class RankerAPI(abc.ABC):
     pos_label = ''
     neg_label = ''
 
+    @abc.abstractmethod
     def get_sorted_urls_stack(self):
         return []
 
+    @abc.abstractmethod
     def displayable_job_by_url(self, url):
         return pd.Series()
 
+    @abc.abstractmethod
     def is_valid_label_input(self, label: str):
         return False
 
+    @abc.abstractmethod
     def rank_jobs(self):
         pass
 
+    @abc.abstractmethod
     def is_labeled(self, url):
         return False
 
+    @abc.abstractmethod
     def add_label(self, url, label):
         pass
 
@@ -160,6 +167,10 @@ class JobsRanker(RankerAPI):
 
     def _sort_jobs(self, df):
         sort_cols = [self.model_score_col, self.keyword_score_col]
+
+        if self.model_score is None or self.keyword_score is None:
+            return df  # didn't train
+
         if self.model_score < self.keyword_score:
             sort_cols.reverse()
             logger.info(f'Sorting by keyword-score instead of model-score '

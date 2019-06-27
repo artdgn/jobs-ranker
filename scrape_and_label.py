@@ -3,9 +3,10 @@
 import os
 from argparse import ArgumentParser
 
+from inputs import controller, text
 from crawler.scraping import start_scraping
 from joblist.ranking import JobsRanker
-import inputs.text
+from tasks.dao import TasksDao
 
 from utils.logger import logger
 
@@ -33,7 +34,10 @@ def main():
 
     os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
-    task_config = inputs.text.load_or_choose_task(task_name=args.task_json)
+    task_chooser = controller.TaskChoiceController(
+        tasks_dao=TasksDao(),
+        frontend=text.TaskChoiceFrontend())
+    task_config = task_chooser.load_or_choose_task(task_name=args.task_json)
 
     if args.scrape:
         start_scraping(task_config=task_config,
@@ -51,7 +55,11 @@ def main():
             dedup_new=(not args.no_dedup),
             skipped_as_negatives=args.assume_negative)
 
-        inputs.text.label_jobs(jobs_ranker=jobs_ranker, recalc_everytime=args.recalc)
+        labeler = controller.LabelController(
+            jobs_ranker=jobs_ranker,
+            frontend=text.TextLabelFrontend())
+
+        labeler.label_jobs(recalc_everytime=args.recalc)
 
     else:
         logger.info('No scraped jobs found, please run scraping before '
