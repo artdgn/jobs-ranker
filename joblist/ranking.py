@@ -8,12 +8,36 @@ from crawler.scraping import read_scrapy_file
 from joblist.labeled import LabeledJobs
 from ml.descriptions_similarity import dedup_by_descriptions_similarity
 import ml.regression
-from tasks.config import get_task_config, TaskConfig
+from tasks.config import TaskConfig
+from tasks.dao import TasksDao
 
 from utils.logger import logger
 
 
-class JobsRanker:
+class RankerAPI:
+    pos_label = ''
+    neg_label = ''
+
+    def get_sorted_urls_stack(self):
+        return []
+
+    def displayable_job_by_url(self, url):
+        return pd.Series()
+
+    def is_valid_label_input(self, label: str):
+        return False
+
+    def rank_jobs(self):
+        pass
+
+    def is_labeled(self, url):
+        return False
+
+    def add_label(self, url, label):
+        pass
+
+
+class JobsRanker(RankerAPI):
     keyword_score_col = 'keyword_score'
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
@@ -56,7 +80,7 @@ class JobsRanker:
         self.df_jobs = self._sort_jobs(self.df_jobs)
 
     def _read_task_config(self):
-        self.task_config = get_task_config(self.task_config.name)
+        self.task_config = TasksDao.get_task_config(self.task_config.name)
 
     def _init_labeled_dao(self):
         self.labels_dao = LabeledJobs(task_name=self.task_config.name,
@@ -164,10 +188,10 @@ class JobsRanker:
                 self.intermidiate_score_cols.append(group_col)
 
         df[self.keyword_score_col] = (
-            1 / df.description_positive_count.rank(ascending=False)
-            - 1 / df.description_negative_count.rank(ascending=False)
-            + 1 / df.title_positive_count.rank(ascending=False)
-            - 1 / df.title_negative_count.rank(ascending=False))
+                1 / df.description_positive_count.rank(ascending=False)
+                - 1 / df.description_negative_count.rank(ascending=False)
+                + 1 / df.title_positive_count.rank(ascending=False)
+                - 1 / df.title_negative_count.rank(ascending=False))
 
         return df
 

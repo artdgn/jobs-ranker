@@ -9,7 +9,7 @@ from utils.logger import logger
 import common
 
 
-def dedup_by_descriptions_similarity(strings, keep=common.MLParams.dedup_keep):
+def dedup_by_descriptions_similarity(strings, keep=None):
 
     dup_i, dup_j = duplicates_by_tfidf_cosine(strings)
 
@@ -17,6 +17,9 @@ def dedup_by_descriptions_similarity(strings, keep=common.MLParams.dedup_keep):
     for i, j in zip(dup_i, dup_j):
         dup_dict_inds[i].add(j)
         dup_dict_inds[j].add(i)
+
+    if keep is None:
+        keep = common.MLParams.dedup_keep
 
     if keep == 'first':
         take_ind = 0

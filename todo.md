@@ -1,7 +1,10 @@
 - eng:
-    - display closest labeled dup for each + simil score + label 
-    - refactor dups   
-    - GUI - django / jupyter? 
+    - django/flask frontend
+    - better readme
+    - display closest labeled dup for each + simil score + label
+    - try different models / feat selection again
+    - ranking model instead of regression 
+    - refactor dups
     - tests        
     
 - algo:

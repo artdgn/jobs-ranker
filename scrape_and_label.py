@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 
 from crawler.scraping import start_scraping
 from joblist.ranking import JobsRanker
-from input.text import load_or_choose_task, label_jobs
+import inputs.text
 
 from utils.logger import logger
 
@@ -33,7 +33,7 @@ def main():
 
     os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
-    task_config = load_or_choose_task(task_name=args.task_json)
+    task_config = inputs.text.load_or_choose_task(task_name=args.task_json)
 
     if args.scrape:
         start_scraping(task_config=task_config,
@@ -44,14 +44,14 @@ def main():
               for f in sorted(os.listdir(task_config.crawls_dir))]
 
     if crawls:
-        jobs = JobsRanker(
+        jobs_ranker = JobsRanker(
             scraped=crawls.pop(),
             task_config=task_config,
             older_scraped=crawls,
             dedup_new=(not args.no_dedup),
             skipped_as_negatives=args.assume_negative)
 
-        label_jobs(joblist=jobs, recalc_everytime=args.recalc)
+        inputs.text.label_jobs(jobs_ranker=jobs_ranker, recalc_everytime=args.recalc)
 
     else:
         logger.info('No scraped jobs found, please run scraping before '

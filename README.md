@@ -31,8 +31,7 @@ and the user is asked to label the relevance.
 
 ## Machine Learning:
 - Relevance learning: TFIDF features, salary guess model output, keywords score -> Simple RF model.
-- Deduplication: TFIDF features (differently tuned) -> Cosine similarty -> 
-    Cooccurrence propagation -> Hand-tuned threshold (may not be ideal for your dataset).
+- Deduplication: TFIDF features (for uncommon n-grams) -> Cosine similarty -> Hand-tuned threshold (may not be ideal for your dataset).
 - Salary guess (used as a feature): TFIDF + user keywords score -> RF.
 
 # Installation:
@@ -45,7 +44,7 @@ and the user is asked to label the relevance.
 ## Docker:
 1. Make a folder for persisting your data between the scraping runs. E.g. `~/jobs_data`
 2. In the instructions below instead of running `python scrape_and_label.py ...` 
-run `docker run --rm -it -v $(realpath ./data):/jobs_recommender/data artdgn/jobs_recommender ...` 
+run `docker run --rm -it -v $(realpath ./jobs_data):/jobs_recommender/data artdgn/jobs_recommender ...` 
 
 # Running
 

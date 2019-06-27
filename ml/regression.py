@@ -22,12 +22,16 @@ MAIN_METRIC = SPEARMAN
 
 class RegressorTrainer:
 
-    def __init__(self, test_ratio=common.MLParams.test_ratio, target_name=''):
+    def __init__(self, test_ratio=None, target_name=''):
         # self.cat_cols = cat_cols
         # self.num_cols = num_cols
         # self.y_col = y_col
         # self.eval_on_test = eval_on_test
         self.target_name = target_name
+
+        if test_ratio is None:
+            test_ratio = common.MLParams.test_ratio
+
         self.test_ratio = test_ratio
 
     def train_regressor(self, df, cat_cols, num_cols, y_col, select_cols=False):
@@ -149,8 +153,11 @@ class RFPipeline:
         top_feat_x = x[:, top_n_feat].toarray()
         cors_mat, _ = scipy.stats.spearmanr(top_feat_x, y.reshape(-1, 1))
         cors_vec = cors_mat[-1, 0:-1]
+        non_zeros = top_feat_x.astype(bool).sum(0)
         df = pd.DataFrame(
-            {'name': top_names, 'correlation': cors_vec}). \
+            {'name': top_names,
+             'correlation': cors_vec,
+             'nonzeros': non_zeros}). \
             sort_values('correlation', ascending=False)
 
         logger.info(f'Top {n} informative features and correlations to '
