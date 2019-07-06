@@ -92,3 +92,10 @@ ENV/
 *.csv
 
 *.sqlite3
+
+# data
+data/*
+tasks/*.json
+
+# temp files
+*.*~

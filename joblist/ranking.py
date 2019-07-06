@@ -49,8 +49,6 @@ class JobsRanker(RankerAPI):
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
     target_col = 'target'
-    pos_label = 'y'
-    neg_label = 'n'
 
     def __init__(self, scraped, task_config: TaskConfig,
                  older_scraped=(),
@@ -92,7 +90,9 @@ class JobsRanker(RankerAPI):
     def _init_labeled_dao(self):
         self.labels_dao = LabeledJobs(task_name=self.task_config.name,
                                       dup_dict=self.dup_dict)
-        logger.info(f'total labeled jobs DF: {len(self.labels_dao.df)}')
+        self.pos_label = self.labels_dao.pos_label
+        self.neg_label = self.labels_dao.neg_label
+        logger.info(self.labels_dao)
 
     def _read_last_scraped(self, dedup=True):
         if not dedup:
@@ -173,10 +173,10 @@ class JobsRanker(RankerAPI):
 
         if self.model_score < self.keyword_score:
             sort_cols.reverse()
-            logger.info(f'Sorting by keyword-score instead of model-score '
-                        f'because model-score = {self.model_score}, '
-                        f'keyword-score = {self.keyword_score}')
-        logger.info(f'Sorting by columns: {sort_cols}')
+
+        logger.info(f'Sorting by columns: {sort_cols} '
+                    f'(model-score = {self.model_score:.2f}, '
+                    f'keyword-score = {self.keyword_score:.2f})')
         df.sort_values(sort_cols, ascending=False, inplace=True)
         return df
 

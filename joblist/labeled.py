@@ -7,6 +7,8 @@ from common import LABELED_ROOT_DIR
 class LabeledJobs:
     url_col = 'url'
     label_col = 'label'
+    pos_label = 'y'
+    neg_label = 'n'
 
     def __init__(self, task_name, dup_dict=None):
         self.filename = self._task_name_to_filename(task_name)
@@ -43,7 +45,12 @@ class LabeledJobs:
             self.save()
 
     def __repr__(self):
-        return self.df.__repr__()
+        total = len(self.df)
+        neg = (self.df.loc[:, self.label_col] == self.neg_label).sum()
+        pos = (self.df.loc[:, self.label_col] == self.pos_label).sum()
+        return (f'LabeledJobs: {total} labeled ({neg / total:.1%} neg, '
+                f'{pos / total:.1%} pos, '
+                f'{(total - pos - neg) / total:.1%} partial relevance)')
 
     def export_df(self, keep='first'):
 

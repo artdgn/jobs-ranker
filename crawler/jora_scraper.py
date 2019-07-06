@@ -37,6 +37,12 @@ class _JoraBaseSpider(scrapy.Spider):
 def get_jora_spider_for_url(search_url):
 
     class SpecificSpider(_JoraBaseSpider):
-        start_urls = [search_url]
+        if isinstance(search_url, str):
+            start_urls = [search_url]
+        elif isinstance(search_url, list):
+            start_urls = search_url
+        else:
+            raise ValueError(f'search_url has to be either string '
+                             f'or list of str, got: {search_url}')
 
     return SpecificSpider
