@@ -2,3 +2,4 @@ scrapy
 scikit-learn
 numpy
 pandas
+Flask

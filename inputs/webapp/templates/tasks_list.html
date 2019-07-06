@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <h1>Tasks:</h1>
+    <ul id="tasks">
+    {% for item in task_urls %}
+        <li><a href="{{ item.url }}"><h1>{{ item.name }}</h1></a></li>
+    {% endfor %}
+    </ul>
+{% endblock %}

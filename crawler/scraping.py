@@ -41,7 +41,7 @@ def start_scraping(task_config: TaskConfig, http_cache=False, blocking=True):
                     f'check log file at {log_path}')
         process.join()
     else:
-        return process
+        return process, log_path
 
 
 def read_scrapy_file(filename):

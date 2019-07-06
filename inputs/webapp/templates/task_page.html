@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <h1>Task "{{task_name}}":</h1>
+    <h2>Label: </h2> <a href="{{ label_url }}"><h1>{{ label_url }}</h1></a>
+    <h2>Scrape: </h2> <a href="{{ scrape_url }}"><h1>{{ scrape_url }}</h1></a>
+    <h2>Task data: </h2>
+    <pre id="json">{{ task_data }}</pre>
+{% endblock %}

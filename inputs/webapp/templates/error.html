@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <h1>Error:</h1>
+    <h2>{{ message }}</h2>
+    <a href="{{ back_url }}"><h1> {{back_text}}</h1> </a>
+{% endblock %}
