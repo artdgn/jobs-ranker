@@ -2,7 +2,9 @@ import collections
 import json
 
 import flask
+import requests
 
+from common import HEADERS
 from joblist.ranking import JobsRanker
 from tasks.dao import TasksDao
 from crawler.scraping import start_scraping
@@ -130,6 +132,7 @@ def label_url(task_name, url):
             skip_url=flask.url_for('skip_url', task_name=task_name, url=url),
             recalc_url=flask.url_for('recalc', task_name=task_name),
             back_url=flask.url_for('task_description', task_name=task_name),
+            iframe_url=flask.url_for('source_posting', url=url)
             )
 
     else:
@@ -172,6 +175,10 @@ def recalc(task_name):
     ranker.rerank_jobs()
     return flask.redirect(flask.url_for('label_task', task_name=task_name))
 
+
+@app.route('/source_posting/<path:url>')
+def source_posting(url):
+    return requests.get(url, headers=HEADERS).text
 
 @app.route('/<task_name>/scrape/')
 def scrape_task(task_name):

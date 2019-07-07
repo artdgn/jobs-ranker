@@ -39,3 +39,16 @@ class MLParams:
 
 class InfoParams:
     top_n_feat = 20
+
+
+HEADERS = {
+    'authority': 'www.google.com',
+    'scheme': 'https',
+    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image'
+              '/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+    'accept-language': 'en-GB,en;q=0.9,en-US;q=0.8',
+    'dnt': '1',
+    'upgrade-insecure-requests': '1',
+    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,'
+                  ' like Gecko) Chrome/74.0.3729.157 Safari/537.36',
+}
