@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Waiting{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <h1>{{ message }}</h1>
+    <h2>(Waiting {{ seconds }} (more) seconds to refresh)</h2>
+<meta http-equiv="refresh" content="{{ seconds }}">
+{% endblock %}

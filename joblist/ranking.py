@@ -5,7 +5,7 @@ import pandas as pd
 import re
 
 import common
-from crawler.scraping import read_scrapy_file
+from crawler.scraping import CrawlsFilesDao
 from joblist.labeled import LabeledJobs
 from ml.descriptions_similarity import dedup_by_descriptions_similarity
 import ml.regression
@@ -18,6 +18,14 @@ from utils.logger import logger
 class RankerAPI(abc.ABC):
     pos_label = ''
     neg_label = ''
+
+    @abc.abstractproperty
+    def ready(self):
+        return False
+
+    @abc.abstractmethod
+    def load_and_process_data(self):
+        pass
 
     @abc.abstractmethod
     def get_sorted_urls_stack(self):
@@ -32,7 +40,7 @@ class RankerAPI(abc.ABC):
         return False
 
     @abc.abstractmethod
-    def rank_jobs(self):
+    def rerank_jobs(self):
         pass
 
     @abc.abstractmethod
@@ -50,44 +58,54 @@ class JobsRanker(RankerAPI):
     salary_guess_col = 'salary_guess'
     target_col = 'target'
 
-    def __init__(self, scraped, task_config: TaskConfig,
-                 older_scraped=(),
+    def __init__(self,
+                 task_config: TaskConfig,
                  dedup_new=True,
-                 dup_keep=common.MLParams.dedup_keep,
-                 skipped_as_negatives=True
+                 skipped_as_negatives=False
                  ):
-        self.scraped_source = scraped
+        self.all_crawls_sources = CrawlsFilesDao.all_crawls(
+            task_config, raise_on_missing=True)
+        self.recent_crawl_source = self.all_crawls_sources[-1]
         self.task_config = task_config
-        self.older_scraped = older_scraped
         self.dedup_new = dedup_new
-        self.dup_keep = dup_keep
         self.skipped_as_negatives = skipped_as_negatives
         self.regressor = None
         self.model_score = None
         self.keyword_score = None
         self.regressor_salary = None
         self.reg_sal_model_score = None
+        self.df_jobs = None
+        self.df_jobs_all = None
         self.intermidiate_score_cols = []
         self.dup_dict = {}
-        self._load_and_process_data()
+        self._ready = False
         _pandas_console_options()
 
-    def _load_and_process_data(self):
+    @property
+    def ready(self):
+        return self._ready
+
+    def load_and_process_data(self):
         self._read_all_scraped()
-        self._init_labeled_dao()
+        self._get_labeled_dao()
         self._read_last_scraped(dedup=self.dedup_new)
         if len(self.df_jobs):
             self.rank_jobs()
 
     def rank_jobs(self):
         self._read_task_config()
+        self._ready = False
         self.df_jobs = self._add_model_score(self.df_jobs)
         self.df_jobs = self._sort_jobs(self.df_jobs)
+        self._ready = True
+
+    def rerank_jobs(self):
+        return self.rank_jobs()
 
     def _read_task_config(self):
         self.task_config = TasksDao.get_task_config(self.task_config.name)
 
-    def _init_labeled_dao(self):
+    def _get_labeled_dao(self):
         self.labels_dao = LabeledJobs(task_name=self.task_config.name,
                                       dup_dict=self.dup_dict)
         self.pos_label = self.labels_dao.pos_label
@@ -96,13 +114,13 @@ class JobsRanker(RankerAPI):
 
     def _read_last_scraped(self, dedup=True):
         if not dedup:
-            self.df_jobs = read_scrapy_file(self.scraped_source)
+            self.df_jobs = CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source)
             self._add_duplicates_column()
         else:
             self.df_jobs = self.df_jobs_all. \
-                               loc[self.df_jobs_all['scraped_file'] == self.scraped_source, :]
-        logger.info(f'most recent scrape DF: {len(self.df_jobs)} ({self.scraped_source}, '
-                    f'all scraped: {len(read_scrapy_file(self.scraped_source))})')
+                               loc[self.df_jobs_all['scraped_file'] == self.recent_crawl_source, :]
+        logger.info(f'most recent scrape DF: {len(self.df_jobs)} ({self.recent_crawl_source}, '
+                    f'all scraped: {len(CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source))})')
 
     def _add_duplicates_column(self):
         dup_no_self = {k: [u for u in v if u != k]
@@ -116,15 +134,15 @@ class JobsRanker(RankerAPI):
         self.df_jobs = pd.merge(self.df_jobs, df_dups, on='url', how='left')
 
     def _read_all_scraped(self):
-        files = list(self.older_scraped) + [self.scraped_source]
+        files = list(self.all_crawls_sources) + [self.recent_crawl_source]
 
         df_jobs = pd.concat(
-            [read_scrapy_file(file) for file in files], axis=0). \
+            [CrawlsFilesDao.read_scrapy_file(file) for file in files], axis=0). \
             drop_duplicates(subset=['url']). \
             dropna(subset=['description'])
 
         keep_inds, dup_dict_inds = dedup_by_descriptions_similarity(
-            df_jobs['description'], keep=self.dup_keep)
+            df_jobs['description'], keep=common.MLParams.dedup_keep)
 
         urls = df_jobs['url'].values
         self.dup_dict = {urls[i]: urls[sorted([i] + list(dups))]
@@ -264,7 +282,7 @@ class JobsRanker(RankerAPI):
     def _train_df_with_labels(self):
         df_jobs_all = self.df_jobs_all.copy()
 
-        labels_df = self.labels_dao.export_df(keep=self.dup_keep)
+        labels_df = self.labels_dao.export_df(keep=common.MLParams.dedup_keep)
 
         df_train = labels_df.set_index('url'). \
             join(df_jobs_all.set_index('url'), how='left')

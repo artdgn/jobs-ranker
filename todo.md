@@ -1,5 +1,6 @@
 - eng:
-    - django/flask frontend
+    - flask frontend
+    - rename task to profile
     - better readme
     - display closest labeled dup for each + simil score + label
     - try different models / feat selection again

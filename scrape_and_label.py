@@ -8,8 +8,6 @@ from crawler.scraping import start_scraping
 from joblist.ranking import JobsRanker
 from tasks.dao import TasksDao
 
-from utils.logger import logger
-
 
 def parse_args():
     parser = ArgumentParser()
@@ -32,8 +30,6 @@ def parse_args():
 def main():
     args = parse_args()
 
-    os.chdir(os.path.realpath(os.path.dirname(__file__)))
-
     task_chooser = controller.TaskChoiceController(
         tasks_dao=TasksDao(),
         frontend=text.TaskChoiceFrontend())
@@ -44,26 +40,18 @@ def main():
                        http_cache=args.http_cache,
                        blocking=True)
 
-    crawls = [os.path.join(task_config.crawls_dir, f)
-              for f in sorted(os.listdir(task_config.crawls_dir))]
+    jobs_ranker = JobsRanker(
+        task_config=task_config,
+        dedup_new=(not args.no_dedup),
+        skipped_as_negatives=args.assume_negative)
 
-    if crawls:
-        jobs_ranker = JobsRanker(
-            scraped=crawls.pop(),
-            task_config=task_config,
-            older_scraped=crawls,
-            dedup_new=(not args.no_dedup),
-            skipped_as_negatives=args.assume_negative)
+    labeler = controller.LabelController(
+        jobs_ranker=jobs_ranker,
+        frontend=text.TextLabelFrontend())
 
-        labeler = controller.LabelController(
-            jobs_ranker=jobs_ranker,
-            frontend=text.TextLabelFrontend())
+    labeler.load_ranker(background=False)
 
-        labeler.label_jobs(recalc_everytime=args.recalc)
-
-    else:
-        logger.info('No scraped jobs found, please run scraping before '
-                    'labeling by specifying -s (--scrape) flag')
+    labeler.label_jobs(recalc_everytime=args.recalc)
 
 
 if __name__ == '__main__':

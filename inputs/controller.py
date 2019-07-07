@@ -1,12 +1,13 @@
 import sys
+from threading import Thread
 
 from inputs.text import LabelFrontendAPI
 from joblist.ranking import RankerAPI
 from tasks.dao import TasksDao
+from utils.logger import logger
 
 
 class LabelController:
-
     _SKIP = 'skip'
     _STOP = 'stop'
     _RECALC = 'recalc'
@@ -25,9 +26,24 @@ class LabelController:
         self.frontend.skip_tok = self._SKIP
         self.frontend.stop_tok = self._STOP
         self.frontend.recalc_tok = self._RECALC
+        self._loader_thread = None
+
+    def ready(self):
+        return self.jobs_ranker.ready
+
+    def load_ranker(self, force=False, background=False):
+        not_loaded = force or not self.jobs_ranker.ready
+        not_loading = (self._loader_thread is None or
+                       not self._loader_thread.is_alive())
+        if not_loaded and not_loading:
+            if background:
+                self._loader_thread = Thread(
+                    target=self.jobs_ranker.load_and_process_data)
+                self._loader_thread.start()
+            else:
+                self.jobs_ranker.load_and_process_data()
 
     def label_jobs(self, recalc_everytime=False):
-
         urls_stack = self.jobs_ranker.get_sorted_urls_stack()
         skipped = set()
         while len(urls_stack):
@@ -52,7 +68,7 @@ class LabelController:
                     continue
 
                 if resp == self._RECALC:
-                    self.jobs_ranker.rank_jobs()
+                    self.jobs_ranker.rerank_jobs()
                     urls_stack = self.jobs_ranker.get_sorted_urls_stack()
                     continue
 
@@ -60,7 +76,7 @@ class LabelController:
                 self.jobs_ranker.add_label(row.url, resp)
 
                 if recalc_everytime:
-                    self.jobs_ranker.rank_jobs()
+                    self.jobs_ranker.rerank_jobs()
                     urls_stack = self.jobs_ranker.get_sorted_urls_stack()
 
         if not len(urls_stack):

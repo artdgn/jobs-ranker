@@ -97,7 +97,7 @@ created inside docker will be owned by root.
 A: You'll need to create a different scraper object and tune the scraping to suit that site. 
 Refer to the [scrapy docs](https://docs.scrapy.org/en/latest/) 
 and [selector gadget](https://selectorgadget.com/)
-2. Q: Why not Deep Learning, where's ELMO and BERT? A: The main goal was to simplify job seeking 
+2. Q: Why not Deep Learning, where's ELMO / BERT / GPT2 / $LATEST_NLP_MIRACLE? A: The main goal was to simplify job seeking 
 for myself. Also my guess is that there is little 
 to gain from sophsticated models because for the initial relevance task a job-ad is 
 often just a collection of important keywords embedded in unimportant sentences and paragraphs. 

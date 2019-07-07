@@ -44,16 +44,28 @@ def start_scraping(task_config: TaskConfig, http_cache=False, blocking=True):
         return process, log_path
 
 
-def read_scrapy_file(filename):
-    try:
-        df = pd.read_csv(filename)
-    except pandas.errors.EmptyDataError:
-        logger.info(f'found empty scrape file:{filename}. trying to delete.')
-        os.remove(filename)
-        return pd.DataFrame()
-    else:
-        drop_cols = ([col for col in df.columns if col.startswith('download_')]
-                     + ['depth'])
-        df.drop(drop_cols, axis=1, inplace=True)
-        df['scraped_file'] = filename
-        return df
+class CrawlsFilesDao:
+
+    @staticmethod
+    def read_scrapy_file(filename):
+        try:
+            df = pd.read_csv(filename)
+        except pandas.errors.EmptyDataError:
+            logger.info(f'found empty scrape file:{filename}. trying to delete.')
+            os.remove(filename)
+            return pd.DataFrame()
+        else:
+            drop_cols = ([col for col in df.columns if col.startswith('download_')]
+                         + ['depth'])
+            df.drop(drop_cols, axis=1, inplace=True)
+            df['scraped_file'] = filename
+            return df
+
+    @staticmethod
+    def all_crawls(task_config: TaskConfig, raise_on_missing=True):
+        all_crawls = [os.path.join(task_config.crawls_dir, f)
+                  for f in sorted(os.listdir(task_config.crawls_dir))]
+        if raise_on_missing and not all_crawls:
+            raise FileNotFoundError(f'No crawls found for task "{task_config.name}", '
+                                    f'please run scraping.')
+        return all_crawls
