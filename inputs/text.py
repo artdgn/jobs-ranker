@@ -38,7 +38,7 @@ class Labeler:
     def label_jobs_loop(self, recalc_everytime=False):
         for url in iter(self.jobs_ranker.next_unlabeled, None):
 
-            row = self.jobs_ranker.displayable_job_by_url(url)
+            row = self.jobs_ranker.url_data(url)
 
             resp = self.label_data(row)
 
@@ -58,7 +58,7 @@ class Labeler:
                 continue
 
             # not any of the control_tokens
-            self.jobs_ranker.add_label(row.url, resp)
+            self.jobs_ranker.add_label(url, resp)
 
             if recalc_everytime:
                 self.jobs_ranker.rerank_jobs()

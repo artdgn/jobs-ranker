@@ -33,7 +33,7 @@ class RankerAPI(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def displayable_job_by_url(self, url):
+    def url_data(self, url):
         return pd.Series()
 
     @abc.abstractmethod
@@ -173,7 +173,7 @@ class JobsRanker(RankerAPI):
         logger.info(f'total historic jobs DF: {len(self.df_jobs_all)} '
                     f'(deduped from {len(df_jobs)})')
 
-    def displayable_job_by_url(self, url):
+    def url_data(self, url):
         not_show_cols = (['description', 'description_length',
                           'scraped_file', 'salary', 'date'] +
                          self.intermidiate_score_cols)

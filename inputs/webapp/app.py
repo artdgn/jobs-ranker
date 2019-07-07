@@ -1,3 +1,4 @@
+import collections
 import json
 
 import flask
@@ -5,11 +6,14 @@ import flask
 from joblist.ranking import JobsRanker
 from tasks.dao import TasksDao
 from crawler.scraping import start_scraping
+from utils.logger import logger
 
 app = flask.Flask(__name__)
 
 tasks_dao = TasksDao()
 rankers = {}
+skipped = collections.defaultdict(set)
+url_deques = collections.defaultdict(collections.deque)
 
 
 @app.route('/')
@@ -31,7 +35,7 @@ def not_found(message):
         'error.html',
         message=message,
         back_url=flask.url_for('instructions'),
-        back_text='Go home..'), 404
+        back_text='Go back to start..'), 404
 
 
 def get_task_config(task_name):
@@ -40,13 +44,22 @@ def get_task_config(task_name):
     except FileNotFoundError:
         flask.abort(404, f'task "{task_name}" not found')
 
+def load_ranker(task_name):
+    ranker = get_ranker(task_name)
+
+    if not ranker.loaded and not ranker.busy:
+        ranker.load_and_process_data(background=True)
+
 
 @app.route('/<task_name>/')
 def task_description(task_name):
     task_config = get_task_config(task_name)
+    load_ranker(task_name)
+
     return flask.render_template(
         'task_page.html',
         task_name=task_name,
+        back_url=flask.url_for('tasks_list'),
         scrape_url=flask.url_for('scrape_task', task_name=task_name),
         label_url=flask.url_for('label_task', task_name=task_name),
         task_data=json.dumps(task_config, indent=4))
@@ -64,21 +77,100 @@ def get_ranker(task_name) -> JobsRanker:
     return ranker
 
 
+def get_url(task_name):
+    ranker = get_ranker(task_name)
+    if not url_deques[task_name]:
+        url = ranker.next_unlabeled()
+        while url is not None and url in skipped[task_name]:
+            url = ranker.next_unlabeled()
+        url_deques[task_name].append(url)
+    else:
+        url = url_deques[task_name][0]
+    return url
+
+
 @app.route('/<task_name>/label/')
 def label_task(task_name):
     ranker = get_ranker(task_name)
+    load_ranker(task_name)
 
-    if not ranker.loaded:
-        if not ranker.busy:
-            ranker.load_and_process_data(background=True)
+    if ranker.busy:
         return flask.render_template(
             'waiting.html',
             message='Waiting for labeler to crunch all the data',
             seconds=5)
     else:
+        url = get_url(task_name)
+
+        if url is None:
+            return flask.render_template(
+                'error.html',
+                message=(f'No more new unlabeled jobs for task "{task_name}", '
+                         f'try dedup off, or scrape new jobs'),
+                back_url=flask.url_for('instructions'),
+                back_text='Go back to start..')
+        else:
+            # go label it
+            return flask.redirect(flask.url_for(
+                'label_url',
+                task_name=task_name,
+                url=url))
 
 
-        return f'labeling for {task_name}'
+@app.route('/<task_name>/label/<path:url>/', methods=['GET', 'POST'])
+def label_url(task_name, url):
+    ranker = get_ranker(task_name)
+    data = ranker.url_data(url)
+
+    if flask.request.method == 'GET':
+        return flask.render_template(
+            'job_page.html',
+            job_url=url,
+            url_data=data,
+            skip_url=flask.url_for('skip_url', task_name=task_name, url=url),
+            recalc_url=flask.url_for('recalc', task_name=task_name),
+            back_url=flask.url_for('task_description', task_name=task_name),
+            )
+
+    else:
+        form = flask.request.form
+        if form.get('no'):
+            resp = ranker.neg_label
+        elif form.get('yes'):
+            resp = ranker.pos_label
+        else:
+            resp = form['label']
+
+        if not ranker.is_valid_label(str(resp)):
+            # bad input, render same page again
+            return flask.redirect(flask.url_for(
+                'label_url',
+                task_name=task_name,
+                url=url))
+        else:
+            ranker.add_label(url, resp)
+            url_deques[task_name].remove(url)
+
+        # label next
+        return flask.redirect(flask.url_for(
+            'label_task',
+            task_name=task_name))
+
+
+@app.route('/<task_name>/label/skip/<path:url>/')
+def skip_url(task_name, url):
+    logger.info(f'skipping: {url} for {task_name}')
+    skipped[task_name].add(url)
+    url_deques[task_name].remove(url)
+    return flask.redirect(flask.url_for('label_task', task_name=task_name))
+
+
+@app.route('/<task_name>/label/recalc/')
+def recalc(task_name):
+    logger.info(f'recalculating: {task_name}')
+    ranker = get_ranker(task_name)
+    ranker.rerank_jobs()
+    return flask.redirect(flask.url_for('label_task', task_name=task_name))
 
 
 @app.route('/<task_name>/scrape/')

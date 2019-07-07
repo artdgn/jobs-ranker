@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Job{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+<h2>Controls:</h2>
+<h3>
+    <a href="{{ skip_url }}">Skip</a>
+    <a href="{{ recalc_url }}">Recalculate</a>
+    <a href="{{ back_url }}">Back to start..</a>
+</h3>
+<form method="post">
+    <h3>Relevance:</h3>
+    <p><input type=submit name=no value=No style="font-size: 22px">
+        <input type=submit name=yes value=Yes style="font-size: 22px">
+        <input type=text name=label style="font-size: 22px" autofocus>
+        <input type=submit name=button value=Label style="font-size: 22px">
+</form>
+<h1>Job details: </h1>
+<a href="{{ job_url }}" target="_blank"><h1>{{ job_url }}</h1></a>
+<pre id="json"><span class="inner-pre" style="font-size: 22px">{{ url_data }}</span></pre>
+{% endblock %}

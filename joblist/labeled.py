@@ -2,6 +2,7 @@ import os
 import pandas as pd
 
 from common import LABELED_ROOT_DIR
+from utils.logger import logger
 
 
 class LabeledJobs:
@@ -43,6 +44,7 @@ class LabeledJobs:
             self.df = self.df.append(
                 pd.DataFrame({self.url_col: [url], self.label_col: [label]}))
             self.save()
+            logger.info(f'Added label: {label} for {url}')
 
     def __repr__(self):
         total = len(self.df)
