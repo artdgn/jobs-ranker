@@ -1,5 +1,6 @@
 import abc
 from itertools import product
+from threading import Thread, Lock
 
 import pandas as pd
 import re
@@ -20,32 +21,28 @@ class RankerAPI(abc.ABC):
     neg_label = ''
 
     @abc.abstractproperty
-    def ready(self):
+    def loaded(self):
+        return False
+
+    @abc.abstractproperty
+    def busy(self):
         return False
 
     @abc.abstractmethod
-    def load_and_process_data(self):
+    def load_and_process_data(self, background=False):
         pass
-
-    @abc.abstractmethod
-    def get_sorted_urls_stack(self):
-        return []
 
     @abc.abstractmethod
     def displayable_job_by_url(self, url):
         return pd.Series()
 
     @abc.abstractmethod
-    def is_valid_label_input(self, label: str):
+    def is_valid_label(self, label: str):
         return False
 
     @abc.abstractmethod
-    def rerank_jobs(self):
+    def rerank_jobs(self, background=False):
         pass
-
-    @abc.abstractmethod
-    def is_labeled(self, url):
-        return False
 
     @abc.abstractmethod
     def add_label(self, url, label):
@@ -78,29 +75,52 @@ class JobsRanker(RankerAPI):
         self.df_jobs_all = None
         self.intermidiate_score_cols = []
         self.dup_dict = {}
-        self._ready = False
+        self._unlabeled = None
+
+        self._busy_lock = Lock()
+        self._bg_thread = None
         _pandas_console_options()
 
     @property
-    def ready(self):
-        return self._ready
+    def loaded(self):
+        return self.df_jobs is not None
 
-    def load_and_process_data(self):
-        self._read_all_scraped()
-        self._get_labeled_dao()
-        self._read_last_scraped(dedup=self.dedup_new)
+    @property
+    def busy(self):
+        return self._busy_lock.locked()
+
+    def _do_in_background(self, func):
+        while self._bg_thread is not None and self._bg_thread.is_alive():
+            self._bg_thread.join()
+        self._bg_thread = Thread(target=func)
+        self._bg_thread.start()
+
+    def load_and_process_data(self, background=False):
+        if background:
+            self._do_in_background(self.load_and_process_data)
+        else:
+            self._load_and_process_data()
+
+    def _load_and_process_data(self):
+        with self._busy_lock:
+            self._read_all_scraped()
+            self._get_labeled_dao()
+            self._read_last_scraped(dedup=self.dedup_new)
         if len(self.df_jobs):
-            self.rank_jobs()
+            self._rank_jobs()
 
-    def rank_jobs(self):
-        self._read_task_config()
-        self._ready = False
-        self.df_jobs = self._add_model_score(self.df_jobs)
-        self.df_jobs = self._sort_jobs(self.df_jobs)
-        self._ready = True
+    def rerank_jobs(self, background=False):
+        if background:
+            self._do_in_background(self._rank_jobs)
+        else:
+            self._rank_jobs()
 
-    def rerank_jobs(self):
-        return self.rank_jobs()
+    def _rank_jobs(self):
+        with self._busy_lock:
+            self._read_task_config()
+            self.df_jobs = self._add_model_score(self.df_jobs)
+            self.df_jobs = self._sort_jobs(self.df_jobs)
+            self._unlabeled = None
 
     def _read_task_config(self):
         self.task_config = TasksDao.get_task_config(self.task_config.name)
@@ -160,10 +180,18 @@ class JobsRanker(RankerAPI):
         row = self.df_jobs.loc[self.df_jobs['url'] == url].iloc[0]
         return row.drop(not_show_cols).dropna()
 
-    def get_sorted_urls_stack(self):
-        return self.df_jobs['url'].tolist()[::-1]
+    def _unlabeled_gen(self):
+        urls = self.df_jobs['url'].tolist()
+        for url in urls:
+            if not self.labels_dao.labeled(url):
+                yield url
 
-    def is_valid_label_input(self, label: str):
+    def next_unlabeled(self):
+        if self._unlabeled is None:
+            self._unlabeled = self._unlabeled_gen()
+        return next(self._unlabeled, None)
+
+    def is_valid_label(self, label: str):
         try:
             number = float(label.
                            replace(self.pos_label, '1.0').
@@ -331,11 +359,8 @@ class JobsRanker(RankerAPI):
             logger.warn(f'Not training label regressor due to '
                         f'having only {len(df_train)} samples')
 
-    def is_labeled(self, url):
-        return self.labels_dao.labeled(url)
-
     def add_label(self, url, label):
-        if self.is_valid_label_input(label):
+        if self.is_valid_label(label):
             return self.labels_dao.label(url, label)
         else:
             raise ValueError()

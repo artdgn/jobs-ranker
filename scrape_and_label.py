@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-import os
 from argparse import ArgumentParser
 
-from inputs import controller, text
+from inputs import text
 from crawler.scraping import start_scraping
 from joblist.ranking import JobsRanker
 from tasks.dao import TasksDao
@@ -30,9 +29,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    task_chooser = controller.TaskChoiceController(
-        tasks_dao=TasksDao(),
-        frontend=text.TaskChoiceFrontend())
+    task_chooser = text.TaskChooser(tasks_dao=TasksDao())
     task_config = task_chooser.load_or_choose_task(task_name=args.task_json)
 
     if args.scrape:
@@ -45,13 +42,11 @@ def main():
         dedup_new=(not args.no_dedup),
         skipped_as_negatives=args.assume_negative)
 
-    labeler = controller.LabelController(
-        jobs_ranker=jobs_ranker,
-        frontend=text.TextLabelFrontend())
+    jobs_ranker.load_and_process_data(background=False)
 
-    labeler.load_ranker(background=False)
+    labeler = text.Labeler(jobs_ranker=jobs_ranker)
 
-    labeler.label_jobs(recalc_everytime=args.recalc)
+    labeler.label_jobs_loop(recalc_everytime=args.recalc)
 
 
 if __name__ == '__main__':

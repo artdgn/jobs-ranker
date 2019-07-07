@@ -2,8 +2,6 @@ import json
 
 import flask
 
-from inputs import controller
-from inputs.text import LabelFrontendAPI
 from joblist.ranking import JobsRanker
 from tasks.dao import TasksDao
 from crawler.scraping import start_scraping
@@ -11,7 +9,7 @@ from crawler.scraping import start_scraping
 app = flask.Flask(__name__)
 
 tasks_dao = TasksDao()
-labelers = {}
+rankers = {}
 
 
 @app.route('/')
@@ -54,42 +52,31 @@ def task_description(task_name):
         task_data=json.dumps(task_config, indent=4))
 
 
-class WebLabelFrontend(LabelFrontendAPI):
-
-    def label_data(self, data=None):
-        return ''
-
-    def end_labeling_message(self, message):
-        pass
-
-
-def get_labeler(task_name) -> controller.LabelController:
+def get_ranker(task_name) -> JobsRanker:
     task_config = get_task_config(task_name)
-    labeler = labelers.get(task_name)
-    if labeler is None:
+    ranker = rankers.get(task_name)
+    if ranker is None:
         ranker = JobsRanker(
             task_config=task_config,
             dedup_new=True,
             skipped_as_negatives=False)
-        labeler = controller.LabelController(
-            jobs_ranker=ranker,
-            frontend=WebLabelFrontend())
-        labelers[task_name] = labeler
-    return labeler
+        rankers[task_name] = ranker
+    return ranker
 
 
 @app.route('/<task_name>/label/')
 def label_task(task_name):
-    labeler = get_labeler(task_name)
+    ranker = get_ranker(task_name)
 
-    if not labeler.ready():
-        labeler.load_ranker(background=True)
+    if not ranker.loaded:
+        if not ranker.busy:
+            ranker.load_and_process_data(background=True)
         return flask.render_template(
             'waiting.html',
-            message='Waiting for labeler to process data',
+            message='Waiting for labeler to crunch all the data',
             seconds=5)
     else:
-        # labeler.label_jobs(recalc_everytime=False)
+
 
         return f'labeling for {task_name}'
 

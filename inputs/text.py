@@ -1,32 +1,31 @@
-import abc
+import sys
 
+from joblist.ranking import JobsRanker
+from tasks.dao import TasksDao
 from utils.logger import logger
 
 
-class LabelFrontendAPI(abc.ABC):
-    y_tok = 'y'
-    n_tok = 'n'
-    skip_tok = 'skip'
-    stop_tok = 'stop'
-    recalc_tok = 'recalc'
+class Labeler:
+    _SKIP = 'skip'
+    _STOP = 'stop'
+    _RECALC = 'recalc'
+    _CONTROL_TOKENS = [_SKIP, _STOP, _RECALC]
+    _END_MESSAGE = ('No more new unlabeled jobs. '
+                    'Try turning dedup off to go over duplicates. '
+                    'run with --help flag for more info')
 
-    @abc.abstractmethod
-    def label_data(self, data=None):
-        return ''
-
-    @abc.abstractmethod
-    def end_labeling_message(self, message):
-        pass
-
-
-class TextLabelFrontend(LabelFrontendAPI):
+    def __init__(self, jobs_ranker: JobsRanker):
+        self.jobs_ranker = jobs_ranker
+        self.y_tok = self.jobs_ranker.pos_label
+        self.n_tok = self.jobs_ranker.neg_label
+        self.skipped = set()
 
     def _prompt(self):
         return (
             "Rate the job relevance on a scale of 0.0 to 1.0, "
             f"or use '{self.y_tok}' for yes or '{self.n_tok}' for no.\n"
             f"Input ( {self.y_tok} / {self.n_tok} / number / "
-            f"{self.stop_tok} / {self.recalc_tok} / {self.skip_tok} ): ")
+            f"{self._STOP} / {self._RECALC} / {self._SKIP} ): ")
 
     def label_data(self, data=None):
         if data is not None:
@@ -36,15 +35,42 @@ class TextLabelFrontend(LabelFrontendAPI):
     def end_labeling_message(self, message):
         logger.info(message)
 
+    def label_jobs_loop(self, recalc_everytime=False):
+        for url in iter(self.jobs_ranker.next_unlabeled, None):
 
-class TaskChoiceFrontendAPI(abc.ABC):
+            row = self.jobs_ranker.displayable_job_by_url(url)
 
-    @abc.abstractmethod
-    def choose_from_task_list(self, tasks, message, instructions):
-        return ''
+            resp = self.label_data(row)
+
+            while not (resp in self._CONTROL_TOKENS or
+                       self.jobs_ranker.is_valid_label(str(resp))):
+                resp = self.label_data()
+
+            if resp == self._STOP:
+                break
+
+            if resp == self._SKIP:
+                self.skipped.add(url)
+                continue
+
+            if resp == self._RECALC:
+                self.jobs_ranker.rerank_jobs()
+                continue
+
+            # not any of the control_tokens
+            self.jobs_ranker.add_label(row.url, resp)
+
+            if recalc_everytime:
+                self.jobs_ranker.rerank_jobs()
+
+        if self.jobs_ranker.next_unlabeled() is None:
+            self.end_labeling_message(self._END_MESSAGE)
 
 
-class TaskChoiceFrontend(TaskChoiceFrontendAPI):
+class TaskChooser:
+
+    def __init__(self, tasks_dao: TasksDao):
+        self.tasks_dao = tasks_dao
 
     def choose_from_task_list(self, tasks, message, instructions):
         numbered_tasks_list = "\n".join(
@@ -54,4 +80,36 @@ class TaskChoiceFrontend(TaskChoiceFrontendAPI):
 
         return input(prompt)
 
+    def load_or_choose_task(self, task_name):
+        try:
+            return self.tasks_dao.get_task_config(task_name)
 
+        except FileNotFoundError:
+            pass
+
+        tasks = self.tasks_dao.tasks_in_scope()
+
+        tasks_folder = self.tasks_dao.TASKS_DIR
+
+        tasks.append('.. cancel and exit')
+
+        message = f'Found these tasks in the {tasks_folder} folder:'
+
+        instructions = f'Choose an option number or provide exact path to your task: '
+
+        resp = self.choose_from_task_list(
+            tasks=tasks,
+            message=message,
+            instructions=instructions)
+
+        # parse inputs
+        try:
+            option_number = int(resp)
+            if option_number == len(tasks) - 1:
+                sys.exit()
+            elif 0 <= option_number < len(tasks) - 1:
+                task_name = tasks[option_number]
+        except ValueError:
+            task_name = resp
+
+        return self.load_or_choose_task(task_name)
