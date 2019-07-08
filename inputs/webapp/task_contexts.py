@@ -10,7 +10,7 @@ class TaskContext:
 
     def __init__(self, task_name):
         self.task_name = task_name
-        self._cur_url = None
+        self._cur_urls = set()
         self._ranker = None
         self._skipped = set()
 
@@ -27,7 +27,7 @@ class TaskContext:
                 task_config=task_config,
                 dedup_new=True,
                 skipped_as_negatives=False)
-            self.move_to_next_url()
+            self.reset_urls()
         return self._ranker
 
     def load_ranker(self):
@@ -38,27 +38,31 @@ class TaskContext:
 
     def get_url(self):
         ranker = self.get_ranker()
-        if not self._cur_url:
+        if not self._cur_urls:
             url = ranker.next_unlabeled()
             while url is not None and url in self._skipped:
                 url = ranker.next_unlabeled()
-            self._cur_url = url
-        return self._cur_url
+            self._cur_urls.add(url)
+        return next(iter(self._cur_urls))
 
-    def move_to_next_url(self):
-        self._cur_url = None
+    def add_label(self, url, label):
+        self.get_ranker().add_label(url, label)
+        self._cur_urls.discard(url)
+
+    def reset_urls(self):
+        self._cur_urls = set()
 
     def reload_ranker(self):
         self.get_ranker().load_and_process_data(background=True)
-        self.move_to_next_url()
+        self.reset_urls()
 
     def recalc(self):
         self.get_ranker().rerank_jobs(background=True)
-        self.move_to_next_url()
+        self.reset_urls()
 
     def skip(self, url):
         self._skipped.add(url)
-        self.move_to_next_url()
+        self._cur_urls.discard(url)
 
 
 class TasksContexts(collections.defaultdict):

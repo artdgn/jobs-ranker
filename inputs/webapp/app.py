@@ -85,8 +85,16 @@ def label_task(task_name):
 @app.route('/<task_name>/label/<path:url>/', methods=['GET', 'POST'])
 def label_url(task_name, url):
     task = tasks[task_name]
+    task.load_ranker()
     ranker = task.get_ranker()
-    data = ranker.url_data(url)
+
+    if ranker.busy:
+        return flask.render_template(
+            'waiting.html',
+            message='Waiting for labeler to crunch all the data',
+            seconds=5)
+
+    data = ranker.url_data(url).drop('url')
 
     if flask.request.method == 'GET':
         return flask.render_template(
@@ -116,8 +124,7 @@ def label_url(task_name, url):
                 task_name=task_name,
                 url=url))
         else:
-            ranker.add_label(url, resp)
-            task.move_to_next_url()
+            task.add_label(url, resp)
             flask.flash(f'labeled "{resp}" for ({url})')
 
         # label next
