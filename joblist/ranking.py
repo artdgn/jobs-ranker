@@ -11,7 +11,7 @@ from joblist.labeled import LabeledJobs
 from ml.descriptions_similarity import dedup_by_descriptions_similarity
 import ml.regression
 from tasks.config import TaskConfig
-from tasks.dao import TasksDao
+from tasks.dao import TasksConfigsDao
 
 from utils.logger import logger
 
@@ -123,7 +123,7 @@ class JobsRanker(RankerAPI):
             self._unlabeled = None
 
     def _read_task_config(self):
-        self.task_config = TasksDao.get_task_config(self.task_config.name)
+        self.task_config = TasksConfigsDao.get_task_config(self.task_config.name)
 
     def _get_labeled_dao(self):
         self.labels_dao = LabeledJobs(task_name=self.task_config.name,

@@ -1,5 +1,12 @@
 - eng:
-    - flask frontend
+    - webapp: 
+        - scraping flow
+        - styling / css
+        - tests
+        - instructions
+        - new task
+        - docker-compose 
+        
     - rename task to profile
     - better readme
     - display closest labeled dup for each + simil score + label

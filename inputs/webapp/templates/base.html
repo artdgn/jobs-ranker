@@ -1,5 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+<title>Job-Recommender</title>
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li> done: {{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
 <head>
     {% block head %}
     {% endblock %}

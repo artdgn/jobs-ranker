@@ -1,7 +1,7 @@
 import sys
 
 from joblist.ranking import JobsRanker
-from tasks.dao import TasksDao
+from tasks.dao import TasksConfigsDao
 from utils.logger import logger
 
 
@@ -69,7 +69,7 @@ class Labeler:
 
 class TaskChooser:
 
-    def __init__(self, tasks_dao: TasksDao):
+    def __init__(self, tasks_dao: TasksConfigsDao):
         self.tasks_dao = tasks_dao
 
     def choose_from_task_list(self, tasks, message, instructions):

@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from inputs import text
 from crawler.scraping import start_scraping
 from joblist.ranking import JobsRanker
-from tasks.dao import TasksDao
+from tasks.dao import TasksConfigsDao
 
 
 def parse_args():
@@ -29,7 +29,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    task_chooser = text.TaskChooser(tasks_dao=TasksDao())
+    task_chooser = text.TaskChooser(tasks_dao=TasksConfigsDao())
     task_config = task_chooser.load_or_choose_task(task_name=args.task_json)
 
     if args.scrape:

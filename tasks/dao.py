@@ -4,7 +4,7 @@ import os
 from tasks.config import TaskConfig
 
 
-class TasksDao:
+class TasksConfigsDao:
     TASKS_DIR = os.path.realpath(os.path.dirname(__file__))
 
     @classmethod
