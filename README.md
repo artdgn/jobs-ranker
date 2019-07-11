@@ -44,7 +44,7 @@ and the user is asked to label the relevance.
 ## Docker:
 1. Make a folder for persisting your data between the scraping runs. E.g. `~/jobs_data`
 2. In the instructions below instead of running `python scrape_and_label.py ...` 
-run `docker run --rm -it -v $(realpath ./jobs_data):/jobs_recommender/data artdgn/jobs_recommender ...` 
+run `docker run --rm -it -v $(realpath ./jobs_data):/jobs_rank/data artdgn/jobs_rank ...` 
 
 # Running
 

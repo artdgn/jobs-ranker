@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 
-from jobs_recommender.common import LABELED_ROOT_DIR
-from jobs_recommender.utils.logger import logger
+from jobs_rank.common import LABELED_ROOT_DIR
+from jobs_rank.utils.logger import logger
 
 
 class LabeledJobs:

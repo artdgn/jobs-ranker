@@ -2,7 +2,7 @@ import sys
 import logging
 import os
 
-from jobs_recommender import common
+from jobs_rank import common
 
 log_path = os.path.join(common.LOG_DIR, f'log-{common.CURRENT_TIMESTAMP}.log')
 

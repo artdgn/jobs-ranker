@@ -5,15 +5,15 @@ from threading import Thread, Lock
 import pandas as pd
 import re
 
-from jobs_recommender import common
-from jobs_recommender.crawler.scraping import CrawlsFilesDao
-from jobs_recommender.joblist.labeled import LabeledJobs
-from jobs_recommender.ml.descriptions_similarity import deduplicate
-from jobs_recommender.ml import regression
-from jobs_recommender.tasks.config import TaskConfig
-from jobs_recommender.tasks.dao import TasksConfigsDao
+from jobs_rank import common
+from jobs_rank.crawler.scraping import CrawlsFilesDao
+from jobs_rank.joblist.labeled import LabeledJobs
+from jobs_rank.ml.descriptions_similarity import deduplicate
+from jobs_rank.ml import regression
+from jobs_rank.tasks.config import TaskConfig
+from jobs_rank.tasks.dao import TasksConfigsDao
 
-from jobs_recommender.utils.logger import logger
+from jobs_rank.utils.logger import logger
 
 
 class RankerAPI(abc.ABC):
