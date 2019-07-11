@@ -1,6 +1,6 @@
 import os
 
-import common
+from jobs_recommender import common
 
 
 class TaskConfig(dict):

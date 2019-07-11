@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <h1>{{ message }}</h1>
+    <a href="{{ option_1_url }}"><h1> {{option_1_text}}</h1> </a>
+    <a href="{{ option_2_url }}"><h1> {{option_2_text}}</h1> </a>
+{% endblock %}

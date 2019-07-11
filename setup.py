@@ -4,7 +4,7 @@ import os
 here = os.path.abspath(os.path.dirname(__file__))
 
 setup(
-    name='jobs_recommender',
+    name='jobs-recommender',
     version='0.1.0',
     description='Job-ads Scraper + Relevance "online learner" / recommender + De-duplicator.',
     long_description=open(os.path.join(here, 'README.md'), encoding='utf-8').read(),

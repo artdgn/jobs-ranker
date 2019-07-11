@@ -3,9 +3,9 @@
 from argparse import ArgumentParser
 
 from inputs import text
-from crawler.scraping import start_scraping
-from joblist.ranking import JobsRanker
-from tasks.dao import TasksConfigsDao
+from crawler import CrawlProcess
+from joblist import JobsRanker
+from tasks import TasksConfigsDao
 
 
 def parse_args():
@@ -33,9 +33,10 @@ def main():
     task_config = task_chooser.load_or_choose_task(task_name=args.task_json)
 
     if args.scrape:
-        start_scraping(task_config=task_config,
-                       http_cache=args.http_cache,
-                       blocking=True)
+        crawl_proc = CrawlProcess(task_config=task_config,
+                                  http_cache=args.http_cache)
+        crawl_proc.start_scraping()
+        crawl_proc.join()
 
     jobs_ranker = JobsRanker(
         task_config=task_config,

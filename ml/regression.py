@@ -12,8 +12,7 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer
 
 from utils.logger import logger
-import common
-
+from jobs_recommender import common
 
 SPEARMAN = 'spearman'
 R2 = 'r2'

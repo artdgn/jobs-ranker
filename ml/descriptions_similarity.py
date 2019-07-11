@@ -5,8 +5,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from utils.logger import logger
-import common
+from jobs_recommender import common
 
 
 def dedup_by_descriptions_similarity(strings, keep=None):

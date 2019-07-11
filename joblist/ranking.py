@@ -5,13 +5,12 @@ from threading import Thread, Lock
 import pandas as pd
 import re
 
-import common
-from crawler.scraping import CrawlsFilesDao
-from joblist.labeled import LabeledJobs
-from ml.descriptions_similarity import dedup_by_descriptions_similarity
-import ml.regression
+from jobs_recommender import common
+from crawler import CrawlsFilesDao
+from joblist import LabeledJobs
+from ml import dedup_by_descriptions_similarity
 from tasks.config import TaskConfig
-from tasks.dao import TasksConfigsDao
+from tasks import TasksConfigsDao
 
 from utils.logger import logger
 
@@ -280,7 +279,7 @@ class JobsRanker(RankerAPI):
 
         if len(df_train) >= common.MLParams.min_training_samples:
             num_cols = [self.keyword_score_col]
-            trainer = ml.regression.RegressorTrainer(target_name='salary')
+            trainer = jobs_recommender.ml.regression.RegressorTrainer(target_name='salary')
             self.regressor_salary, self.reg_sal_model_score = (
                 trainer.train_regressor(df_train,
                                         cat_cols=cat_cols,
@@ -344,7 +343,7 @@ class JobsRanker(RankerAPI):
             num_cols = (self.intermidiate_score_cols +
                         [self.keyword_score_col, self.salary_guess_col])
 
-            trainer = ml.regression.RegressorTrainer(target_name='label')
+            trainer = jobs_recommender.ml.regression.RegressorTrainer(target_name='label')
             self.regressor, self.model_score = (
                 trainer.train_regressor(df_train,
                                         cat_cols=cat_cols,
@@ -352,9 +351,9 @@ class JobsRanker(RankerAPI):
                                         y_col=self.target_col,
                                         select_cols=False))
 
-            keyword_metrics = ml.regression.score_metrics(
+            keyword_metrics = jobs_recommender.ml.regression.score_metrics(
                 df_train[self.keyword_score_col], df_train[self.target_col])
-            self.keyword_score = keyword_metrics[ml.regression.MAIN_METRIC]
+            self.keyword_score = keyword_metrics[jobs_recommender.ml.regression.MAIN_METRIC]
         else:
             logger.warn(f'Not training label regressor due to '
                         f'having only {len(df_train)} samples')

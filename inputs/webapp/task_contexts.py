@@ -1,9 +1,11 @@
 import collections
+from multiprocessing import Process
 
 import flask
 
+from crawler import CrawlsFilesDao, CrawlProcess
 from joblist.ranking import JobsRanker
-from tasks.dao import TasksConfigsDao
+from tasks import TasksConfigsDao
 
 
 class TaskContext:
@@ -13,18 +15,19 @@ class TaskContext:
         self._cur_urls = set()
         self._ranker = None
         self._skipped = set()
+        self._scraper = None
+        self._scrape_subproc = None
 
-    def get_task_config(self):
+    def get_config(self):
         try:
             return TasksConfigsDao.get_task_config(self.task_name)
         except FileNotFoundError:
             flask.abort(404, f'task "{self.task_name}" not found')
 
     def get_ranker(self) -> JobsRanker:
-        task_config = self.get_task_config()
         if self._ranker is None:
             self._ranker = JobsRanker(
-                task_config=task_config,
+                task_config=self.get_config(),
                 dedup_new=True,
                 skipped_as_negatives=False)
             self.reset_urls()
@@ -63,6 +66,24 @@ class TaskContext:
     def skip(self, url):
         self._skipped.add(url)
         self._cur_urls.discard(url)
+
+    def _start_scrape(self):
+        self._scraper.start_scraping()
+        self._scraper.join()
+
+    def start_scrape(self):
+        self._scraper = CrawlProcess(task_config=self.get_config(),
+                                     http_cache=True)
+        self._scrape_subproc = Process(target=self._start_scrape)
+        self._scrape_subproc.start()
+
+    @property
+    def scraping(self):
+        return (self._scrape_subproc is not None and
+                self._scrape_subproc.is_alive())
+
+    def days_since_last_crawl(self):
+        return CrawlsFilesDao.days_since_last_crawl(self.get_config())
 
 
 class TasksContexts(collections.defaultdict):

@@ -1,7 +1,7 @@
 import sys
 
 from joblist.ranking import JobsRanker
-from tasks.dao import TasksConfigsDao
+from tasks import TasksConfigsDao
 from utils.logger import logger
 
 

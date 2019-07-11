@@ -3,9 +3,9 @@ import json
 import flask
 import requests
 
-from common import HEADERS
-from inputs.webapp.task_contexts import TasksContexts
-from tasks.dao import TasksConfigsDao
+from jobs_recommender.common import HEADERS
+from inputs import TasksContexts
+from tasks import TasksConfigsDao
 from utils.logger import logger
 
 app = flask.Flask(__name__)
@@ -50,7 +50,7 @@ def task_description(task_name):
         scrape_url=flask.url_for('scrape_task', task_name=task_name),
         label_url=flask.url_for('label_task', task_name=task_name),
         reload_url=flask.url_for('reload_ranker', task_name=task_name),
-        task_data=json.dumps(task.get_task_config(), indent=4))
+        task_data=json.dumps(task.get_config(), indent=4))
 
 
 @app.route('/<task_name>/label/')
@@ -58,12 +58,15 @@ def label_task(task_name):
     task = tasks[task_name]
     ranker = task.get_ranker()
     task.load_ranker()
+    back_url = flask.url_for('task_description', task_name=task_name)
 
     if ranker.busy:
         return flask.render_template(
             'waiting.html',
             message='Waiting for labeler to crunch all the data',
-            seconds=5)
+            seconds=5,
+            back_url=back_url,
+            back_text=f'.. or go back: {back_url}')
     else:
         url = task.get_url()
 
@@ -72,8 +75,8 @@ def label_task(task_name):
                 'error.html',
                 message=(f'No more new unlabeled jobs for task "{task_name}", '
                          f'try dedup off, or scrape new jobs'),
-                back_url=flask.url_for('instructions'),
-                back_text='Go back to start..')
+                back_url=back_url,
+                back_text=f'Back: {back_url}')
         else:
             # go label it
             return flask.redirect(flask.url_for(
@@ -87,12 +90,15 @@ def label_url(task_name, url):
     task = tasks[task_name]
     task.load_ranker()
     ranker = task.get_ranker()
+    back_url = flask.url_for('task_description', task_name=task_name)
 
     if ranker.busy:
         return flask.render_template(
             'waiting.html',
             message='Waiting for labeler to crunch all the data',
-            seconds=5)
+            seconds=5,
+            back_url=back_url,
+            back_text=f'.. or go back: {back_url}')
 
     data = ranker.url_data(url).drop('url')
 
@@ -103,7 +109,7 @@ def label_url(task_name, url):
             url_data=data,
             skip_url=flask.url_for('skip_url', task_name=task_name, url=url),
             recalc_url=flask.url_for('recalc', task_name=task_name),
-            back_url=flask.url_for('task_description', task_name=task_name),
+            back_url=back_url,
             iframe_url=flask.url_for('source_posting', url=url)
         )
 
@@ -168,19 +174,36 @@ def source_posting(url):
 @app.route('/<task_name>/scrape/')
 def scrape_task(task_name):
     task = tasks[task_name]
+    back_url = flask.url_for('task_description', task_name=task_name)
 
-    # proc, scrape_log_path = start_scraping(task_config=task_config,
-    #                                        http_cache=True,
-    #                                        blocking=False)
-    """
-    add /start/ url to start
-    start scraping and stream log file 
-    keep scraping processes in some global structure (filesystem file with pid?) 
-    active - show, else show "no active scrape" - /start
-    https://stackoverflow.com/questions/36384286/how-to-integrate-flask-scrapy
-    https://github.com/scrapinghub/scrapyrt
-    """
-    return f'scraping for {task_name}'
+    if task.scraping:
+        return flask.render_template(
+            'waiting.html',
+            message='Waiting for scraper to finish scraping',
+            seconds=30,
+            back_url = back_url,
+            back_text = f'Back (will not cancel scrape): {back_url}')
+
+    days_since_last = task.days_since_last_crawl()
+    start_url = flask.url_for('scrape_start', task_name=task_name)
+
+    return flask.render_template(
+        'confirm.html',
+        message=(f'Are you sure you want to start a scrape? '
+                 f'latest crawl is from {days_since_last} ago'),
+        option_1_url=start_url,
+        option_1_text=f'Start: {start_url}',
+        option_2_url=back_url,
+        option_2_text=f'Back: {back_url}',
+    )
+
+@app.route('/<task_name>/scrape/start')
+def scrape_start(task_name):
+    task = tasks[task_name]
+    task.start_scrape()
+    logger.info(f'started scraping for {task_name}')
+    flask.flash(f'Started scraping for task "{task_name}"')
+    return flask.redirect(flask.url_for('scrape_task', task_name=task_name))
 
 
 def run_app(debug=False):
