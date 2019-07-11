@@ -4,16 +4,10 @@ import subprocess
 import pandas as pd
 import pandas.errors
 
-from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
-
-from jobs_rank.crawler.jora_scraper import JoraSpider
-from jobs_rank.crawler import settings as crawler_settings
-
 from jobs_rank.tasks.config import TaskConfig
 
 from jobs_rank import common
-from jobs_rank.utils import logger
+from jobs_rank.utils.logger import logger
 
 
 class CrawlProcess:
@@ -33,30 +27,40 @@ class CrawlProcess:
         self.jobdir_path = os.path.join(
             self.task_config.crawl_job_dir, crawl_name)
 
-    def _settings(self):
-        os.environ['SCRAPY_SETTINGS_MODULE'] = crawler_settings.__name__
-        settings = get_project_settings()
-        settings.set('FEED_FORMAT', 'csv', priority='cmdline')
-        settings.set('FEED_URI', self.crawl_output_path, priority='cmdline')
-        settings.set('JOBDIR', self.jobdir_path, priority = 'cmdline')
-        settings.set('LOG_FILE', self.log_path, priority='cmdline')
-        settings.set('HTTPCACHE_ENABLED', self.http_cache, priority='cmdline')
-        return settings
+    def _settings_dict(self):
+        return {
+            'FEED_FORMAT': 'csv',
+            'FEED_URI':  self.crawl_output_path,
+            'JOBDIR': self.jobdir_path,
+            'LOG_FILE': self.log_path,
+            'HTTPCACHE_ENABLED': self.http_cache
+        }
 
     def start_scraping(self):
-        self.proc = CrawlerProcess(settings=self._settings())
-        self.proc.crawl(JoraSpider(start_urls=self.task_config.search_url))
-        self.proc.start()
 
-        logger.info(f'Started scraping task "{self.task_config.name}", '
-                    f'check log file at {self.log_path}, '
+        joined_start_urls = ','.join(self.task_config.search_urls)
+
+        commands = [
+            'scrapy', 'crawl', 'jora-spider',
+            '-a', f'start_urls="{joined_start_urls}"']
+        for k, v in self._settings_dict().items():
+            commands.extend(['-s', f'{k}="{v}"'])
+
+        self.subproc = subprocess.Popen(
+            ' '.join(commands),
+            shell=True,
+            cwd=os.path.dirname(__file__),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        logger.info(f'Started scraping task "{self.task_config.name}".\n\t'
+                    f'check log file at {self.log_path}\n\t'
                     f'output file at {self.crawl_output_path}')
 
-    def start_subprocess(self):
-        subprocess.Popen(['scrapy', 'crawl'])
-
     def join(self):
-        self.proc.join()
+        self.subproc.communicate()
+
 
 class CrawlsFilesDao:
 
@@ -92,3 +96,8 @@ class CrawlsFilesDao:
         date = os.path.splitext(latest)[0][-10:]
         return (pd.to_datetime(common.CURRENT_DATE) -
                 pd.to_datetime(date)).days
+
+    @classmethod
+    def rows_in_last_crawl(cls, task_config: TaskConfig):
+        latest = cls.all_crawls(task_config)[-1]
+        return len(cls.read_scrapy_file(latest))

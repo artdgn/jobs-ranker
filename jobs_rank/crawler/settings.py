@@ -9,10 +9,10 @@
 #     http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 #     http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = 'crawler'
+BOT_NAME = 'jobs-crawler'
 
-SPIDER_MODULES = ['crawler.jora_scraper']
-NEWSPIDER_MODULE = 'crawler.jora_scraper'
+SPIDER_MODULES = ['jora_scraper']
+NEWSPIDER_MODULE = 'jora_scraper'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 # USER_AGENT = 'crawler (+http://www.yourdomain.com)'

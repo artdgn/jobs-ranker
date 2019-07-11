@@ -2,8 +2,12 @@ import scrapy
 
 
 class JoraSpider(scrapy.Spider):
-    name = "toscrape-css"
+    name = 'jora-spider'
     base_url = 'https://au.jora.com'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start_urls = kwargs.get('start_urls').split(',')
 
     def parse(self, response):
         for job in response.css('#jobresults').css('.jwrap'):

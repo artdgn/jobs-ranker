@@ -1,5 +1,7 @@
 {
-  "search_url": "https://au.jora.com/j?a=14d&l=Sydney+NSW&q=software+engineer&sa=110000&sp=facet_salary_min",
+  "search_urls": [
+    "https://au.jora.com/j?a=14d&l=Sydney+NSW&q=software+engineer&sa=110000&sp=facet_salary_min"
+  ],
   "title_positive": [
     "senior",
     "ninja",

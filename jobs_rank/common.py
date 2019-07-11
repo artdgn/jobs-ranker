@@ -1,7 +1,7 @@
 import os
 import datetime
 
-ROOT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..')
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 LOG_DIR = os.path.join(ROOT_DIR, 'data/logs')
 

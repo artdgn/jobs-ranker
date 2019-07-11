@@ -85,6 +85,10 @@ class TaskContext:
     def days_since_last_crawl(self):
         return CrawlsFilesDao.days_since_last_crawl(self.get_config())
 
+    def jobs_in_latest_crawl(self):
+        return CrawlsFilesDao.rows_in_last_crawl(self.get_config())
+
+
 
 class TasksContexts(collections.defaultdict):
     def __missing__(self, key):

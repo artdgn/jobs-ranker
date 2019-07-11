@@ -10,8 +10,8 @@ class TaskConfig(dict):
         return self['name']
 
     @property
-    def search_url(self):
-        return self['search_url']
+    def search_urls(self):
+        return self['search_urls']
 
     @property
     def crawls_dir(self):

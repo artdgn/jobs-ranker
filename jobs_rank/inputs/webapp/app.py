@@ -163,7 +163,7 @@ def reload_ranker(task_name):
     task.reload_ranker()
     logger.info(f'reloading ranker: {task_name}')
     flask.flash(f're-loading data for task "{task_name}"')
-    return flask.redirect(flask.url_for('label_task', task_name=task_name))
+    return flask.redirect(flask.url_for('task_description', task_name=task_name))
 
 
 @app.route('/source_posting/<path:url>')
@@ -174,27 +174,30 @@ def source_posting(url):
 @app.route('/<task_name>/scrape/')
 def scrape_task(task_name):
     task = tasks[task_name]
-    back_url = flask.url_for('task_description', task_name=task_name)
-
-    if task.scraping:
-        return flask.render_template(
-            'waiting.html',
-            message='Waiting for scraper to finish scraping',
-            seconds=30,
-            back_url = back_url,
-            back_text = f'Back (will not cancel scrape): {back_url}')
+    back_url = flask.url_for('reload_ranker', task_name=task_name)
 
     days_since_last = task.days_since_last_crawl()
+
+    if task.scraping:
+        n_jobs = task.jobs_in_latest_crawl() if days_since_last == 0 else 0
+        return flask.render_template(
+            'waiting.html',
+            message=(f'Waiting for scraper to finish '
+                     f'scraping (crawled {n_jobs} jobs)'),
+            seconds=30,
+            back_url = back_url,
+            back_text = f'Back and reload (will not cancel scrape): {back_url}')
+
     start_url = flask.url_for('scrape_start', task_name=task_name)
 
     return flask.render_template(
         'confirm.html',
         message=(f'Are you sure you want to start a scrape? '
-                 f'latest crawl is from {days_since_last} ago'),
+                 f'latest crawl is from {days_since_last} day ago'),
         option_1_url=start_url,
         option_1_text=f'Start: {start_url}',
         option_2_url=back_url,
-        option_2_text=f'Back: {back_url}',
+        option_2_text=f'Back and reload data: {back_url}',
     )
 
 @app.route('/<task_name>/scrape/start')
