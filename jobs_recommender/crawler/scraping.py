@@ -8,6 +8,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
 from jobs_recommender.crawler.jora_scraper import JoraSpider
+from jobs_recommender.crawler import settings as crawler_settings
 
 from jobs_recommender.tasks.config import TaskConfig
 
@@ -33,7 +34,7 @@ class CrawlProcess:
             self.task_config.crawl_job_dir, crawl_name)
 
     def _settings(self):
-        os.environ['SCRAPY_SETTINGS_MODULE'] = jobs_recommender.crawler.settings.__name__
+        os.environ['SCRAPY_SETTINGS_MODULE'] = crawler_settings.__name__
         settings = get_project_settings()
         settings.set('FEED_FORMAT', 'csv', priority='cmdline')
         settings.set('FEED_URI', self.crawl_output_path, priority='cmdline')

@@ -6,9 +6,10 @@
         - clean up naming crawl vs. scrape
         - styling / css
         - tests
-        - instructions
+        - instructions and readme update
         - new task
-        - docker-compose 
+        - docker commands to makefile
+        - docker-compose   
 	- notifications?
         
     - rename task to profile
