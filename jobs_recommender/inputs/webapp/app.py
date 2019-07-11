@@ -4,8 +4,8 @@ import flask
 import requests
 
 from jobs_recommender.common import HEADERS
-from jobs_recommender.inputs import TasksContexts
-from jobs_recommender.tasks import TasksConfigsDao
+from jobs_recommender.inputs.webapp.task_contexts import TasksContexts
+from jobs_recommender.tasks.dao import TasksConfigsDao
 from jobs_recommender.utils.logger import logger
 
 app = flask.Flask(__name__)

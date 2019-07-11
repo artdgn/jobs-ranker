@@ -3,9 +3,9 @@
 from argparse import ArgumentParser
 
 from jobs_recommender.inputs import text
-from jobs_recommender.crawler import CrawlProcess
-from jobs_recommender.joblist import JobsRanker
-from jobs_recommender.tasks import TasksConfigsDao
+from jobs_recommender.crawler.scraping import CrawlProcess
+from jobs_recommender.joblist.ranking import JobsRanker
+from jobs_recommender.tasks.dao import TasksConfigsDao
 
 
 def parse_args():

@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from jobs_recommender import common
 
 
-def dedup_by_descriptions_similarity(strings, keep=None):
+def deduplicate(strings, keep=None):
 
     dup_i, dup_j = duplicates_by_tfidf_cosine(strings)
 

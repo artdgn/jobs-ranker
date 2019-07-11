@@ -1,7 +1,7 @@
 import sys
 
 from jobs_recommender.joblist.ranking import JobsRanker
-from jobs_recommender.tasks import TasksConfigsDao
+from jobs_recommender.tasks.dao import TasksConfigsDao
 from jobs_recommender.utils.logger import logger
 
 
