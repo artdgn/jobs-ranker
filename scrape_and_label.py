@@ -2,10 +2,10 @@
 
 from argparse import ArgumentParser
 
-from inputs import text
-from crawler import CrawlProcess
-from joblist import JobsRanker
-from tasks import TasksConfigsDao
+from jobs_recommender.inputs import text
+from jobs_recommender.crawler import CrawlProcess
+from jobs_recommender.joblist import JobsRanker
+from jobs_recommender.tasks import TasksConfigsDao
 
 
 def parse_args():

@@ -6,13 +6,13 @@ import pandas as pd
 import re
 
 from jobs_recommender import common
-from crawler import CrawlsFilesDao
-from joblist import LabeledJobs
-from ml import dedup_by_descriptions_similarity
-from tasks.config import TaskConfig
-from tasks import TasksConfigsDao
+from jobs_recommender.crawler import CrawlsFilesDao
+from jobs_recommender.joblist import LabeledJobs
+from jobs_recommender.ml import dedup_by_descriptions_similarity
+from jobs_recommender.tasks.config import TaskConfig
+from jobs_recommender.tasks import TasksConfigsDao
 
-from utils.logger import logger
+from jobs_recommender.utils.logger import logger
 
 
 class RankerAPI(abc.ABC):

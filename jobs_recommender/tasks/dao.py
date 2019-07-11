@@ -1,7 +1,7 @@
 import json
 import os
 
-from tasks.config import TaskConfig
+from jobs_recommender.tasks.config import TaskConfig
 
 
 class TasksConfigsDao:

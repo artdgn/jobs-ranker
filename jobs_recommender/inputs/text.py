@@ -1,8 +1,8 @@
 import sys
 
-from joblist.ranking import JobsRanker
-from tasks import TasksConfigsDao
-from utils.logger import logger
+from jobs_recommender.joblist.ranking import JobsRanker
+from jobs_recommender.tasks import TasksConfigsDao
+from jobs_recommender.utils.logger import logger
 
 
 class Labeler:

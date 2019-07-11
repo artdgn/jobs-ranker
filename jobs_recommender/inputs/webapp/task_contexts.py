@@ -3,9 +3,9 @@ from multiprocessing import Process
 
 import flask
 
-from crawler import CrawlsFilesDao, CrawlProcess
-from joblist.ranking import JobsRanker
-from tasks import TasksConfigsDao
+from jobs_recommender.crawler import CrawlsFilesDao, CrawlProcess
+from jobs_recommender.joblist.ranking import JobsRanker
+from jobs_recommender.tasks import TasksConfigsDao
 
 
 class TaskContext:

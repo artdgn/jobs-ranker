@@ -7,12 +7,12 @@ import pandas.errors
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
-from crawler.jora_scraper import JoraSpider
+from jobs_recommender.crawler.jora_scraper import JoraSpider
 
-from tasks.config import TaskConfig
+from jobs_recommender.tasks.config import TaskConfig
 
 from jobs_recommender import common
-from utils import logger
+from jobs_recommender.utils import logger
 
 
 class CrawlProcess:

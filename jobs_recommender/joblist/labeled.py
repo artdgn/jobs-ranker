@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 from jobs_recommender.common import LABELED_ROOT_DIR
-from utils.logger import logger
+from jobs_recommender.utils.logger import logger
 
 
 class LabeledJobs:

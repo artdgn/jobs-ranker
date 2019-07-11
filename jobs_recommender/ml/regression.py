@@ -11,7 +11,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer
 
-from utils.logger import logger
+from jobs_recommender.utils.logger import logger
 from jobs_recommender import common
 
 SPEARMAN = 'spearman'

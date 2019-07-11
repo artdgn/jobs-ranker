@@ -4,9 +4,9 @@ import flask
 import requests
 
 from jobs_recommender.common import HEADERS
-from inputs import TasksContexts
-from tasks import TasksConfigsDao
-from utils.logger import logger
+from jobs_recommender.inputs import TasksContexts
+from jobs_recommender.tasks import TasksConfigsDao
+from jobs_recommender.utils.logger import logger
 
 app = flask.Flask(__name__)
 app.secret_key = b'secret'
