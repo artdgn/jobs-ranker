@@ -3,12 +3,12 @@ from multiprocessing import Process
 
 import flask
 
-from jobs_rank.crawler.scraping import CrawlsFilesDao, CrawlProcess
-from jobs_rank.joblist.ranking import JobsRanker
-from jobs_rank.tasks.dao import TasksConfigsDao
+from jobs_ranker.crawler.scraping import CrawlsFilesDao, CrawlProcess
+from jobs_ranker.joblist.ranking import JobsRanker
+from jobs_ranker.tasks.configs import TasksConfigsDao
 
 
-class TaskContext:
+class TaskSession:
 
     def __init__(self, task_name):
         self.task_name = task_name
@@ -24,7 +24,8 @@ class TaskContext:
         except FileNotFoundError:
             flask.abort(404, f'task "{self.task_name}" not found')
 
-    def get_ranker(self) -> JobsRanker:
+    @property
+    def ranker(self) -> JobsRanker:
         if self._ranker is None:
             self._ranker = JobsRanker(
                 task_config=self.get_config(),
@@ -34,33 +35,31 @@ class TaskContext:
         return self._ranker
 
     def load_ranker(self):
-        ranker = self.get_ranker()
-        if not ranker.loaded and not ranker.busy:
-            ranker.load_and_process_data(background=True)
+        if not self.ranker.loaded and not self.ranker.busy:
+            self.ranker.load_and_process_data(background=True)
             flask.flash(f'loading data for task "{self.task_name}"')
 
     def get_url(self):
-        ranker = self.get_ranker()
         if not self._cur_urls:
-            url = ranker.next_unlabeled()
+            url = self.ranker.next_unlabeled()
             while url is not None and url in self._skipped:
-                url = ranker.next_unlabeled()
+                url = self.ranker.next_unlabeled()
             self._cur_urls.add(url)
         return next(iter(self._cur_urls))
 
     def add_label(self, url, label):
-        self.get_ranker().add_label(url, label)
+        self.ranker.labeler.add_label(url, label)
         self._cur_urls.discard(url)
 
     def reset_urls(self):
         self._cur_urls = set()
 
     def reload_ranker(self):
-        self.get_ranker().load_and_process_data(background=True)
+        self.ranker.load_and_process_data(background=True)
         self.reset_urls()
 
     def recalc(self):
-        self.get_ranker().rerank_jobs(background=True)
+        self.ranker.rerank_jobs(background=True)
         self.reset_urls()
 
     def skip(self, url):
@@ -92,11 +91,11 @@ class TaskContext:
             return 0
 
 
-class TasksContexts(collections.defaultdict):
+class TasksSessions(collections.defaultdict):
     def __missing__(self, key):
-        self[key] = TaskContext(key)
+        self[key] = TaskSession(key)
         return self[key]
 
     # hint for code completion / lynting
-    def __getitem__(self, item) -> TaskContext:
+    def __getitem__(self, item) -> TaskSession:
         return super().__getitem__(item)

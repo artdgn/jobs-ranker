@@ -3,15 +3,15 @@ import json
 import flask
 import requests
 
-from jobs_rank.common import HEADERS
-from jobs_rank.inputs.webapp.task_contexts import TasksContexts
-from jobs_rank.tasks.dao import TasksConfigsDao
-from jobs_rank.utils.logger import logger
+from jobs_ranker.common import HEADERS
+from jobs_ranker.inputs.webapp.task_contexts import TasksSessions
+from jobs_ranker.tasks.configs import TasksConfigsDao
+from jobs_ranker.utils.logger import logger
 
 app = flask.Flask(__name__)
 app.secret_key = b'secret'
 
-tasks = TasksContexts()
+tasks = TasksSessions()
 
 
 @app.route('/')
@@ -22,10 +22,9 @@ def instructions():
 
 @app.route('/tasks/')
 def tasks_list():
-    tasks = TasksConfigsDao.tasks_in_scope()
     task_urls = [{'name': t,
                   'url': flask.url_for('task_description', task_name=t)}
-                 for t in tasks]
+                 for t in TasksConfigsDao.tasks_in_scope()]
     return flask.render_template('tasks_list.html', task_urls=task_urls)
 
 
@@ -56,11 +55,10 @@ def task_description(task_name):
 @app.route('/<task_name>/label/')
 def label_task(task_name):
     task = tasks[task_name]
-    ranker = task.get_ranker()
     task.load_ranker()
     back_url = flask.url_for('task_description', task_name=task_name)
 
-    if ranker.busy:
+    if task.ranker.busy:
         return flask.render_template(
             'waiting.html',
             message='Waiting for labeler to crunch all the data',
@@ -89,10 +87,9 @@ def label_task(task_name):
 def label_url(task_name, url):
     task = tasks[task_name]
     task.load_ranker()
-    ranker = task.get_ranker()
     back_url = flask.url_for('task_description', task_name=task_name)
 
-    if ranker.busy:
+    if task.ranker.busy:
         return flask.render_template(
             'waiting.html',
             message='Waiting for labeler to crunch all the data',
@@ -100,7 +97,7 @@ def label_url(task_name, url):
             back_url=back_url,
             back_text=f'.. or go back: {back_url}')
 
-    data = ranker.url_data(url).drop('url')
+    data = task.ranker.url_data(url).drop('url')
 
     if flask.request.method == 'GET':
         return flask.render_template(
@@ -116,13 +113,13 @@ def label_url(task_name, url):
     else:
         form = flask.request.form
         if form.get('no'):
-            resp = ranker.neg_label
+            resp = task.ranker.labeler.neg_label
         elif form.get('yes'):
-            resp = ranker.pos_label
+            resp = task.ranker.labeler.pos_label
         else:
             resp = form['label']
 
-        if not ranker.is_valid_label(str(resp)):
+        if not task.ranker.labeler.is_valid_label(str(resp)):
             # bad input, render same page again
             flask.flash(f'not a valid input: "{resp}", please relabel (or skip)')
             return flask.redirect(flask.url_for(
@@ -185,8 +182,8 @@ def scrape_task(task_name):
             message=(f'Waiting for scraper to finish '
                      f'scraping (crawled {n_jobs} jobs)'),
             seconds=30,
-            back_url = back_url,
-            back_text = f'Back and reload (will not cancel scrape): {back_url}')
+            back_url=back_url,
+            back_text=f'Back and reload (will not cancel scrape): {back_url}')
 
     start_url = flask.url_for('scrape_start', task_name=task_name)
 
@@ -199,6 +196,7 @@ def scrape_task(task_name):
         option_2_url=back_url,
         option_2_text=f'Back and reload data: {back_url}',
     )
+
 
 @app.route('/<task_name>/scrape/start')
 def scrape_start(task_name):

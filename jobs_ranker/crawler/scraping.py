@@ -5,10 +5,10 @@ import subprocess
 import pandas as pd
 import pandas.errors
 
-from jobs_rank.tasks.config import TaskConfig
+from jobs_ranker.tasks.configs import TaskConfig
 
-from jobs_rank import common
-from jobs_rank.utils.logger import logger
+from jobs_ranker import common
+from jobs_ranker.utils.logger import logger
 
 
 class CrawlProcess:
@@ -27,6 +27,8 @@ class CrawlProcess:
 
         self.jobdir_path = os.path.join(
             self.task_config.crawl_job_dir, crawl_name)
+
+        self.subproc = None
 
     def _settings_dict(self):
         return {

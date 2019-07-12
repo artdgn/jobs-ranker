@@ -5,28 +5,32 @@ from threading import Thread, Lock
 import pandas as pd
 import re
 
-from jobs_rank import common
-from jobs_rank.crawler.scraping import CrawlsFilesDao
-from jobs_rank.joblist.labeled import LabeledJobs
-from jobs_rank.ml.descriptions_similarity import deduplicate
-from jobs_rank.ml import regression
-from jobs_rank.tasks.config import TaskConfig
-from jobs_rank.tasks.dao import TasksConfigsDao
+from jobs_ranker import common
+from jobs_ranker.crawler.scraping import CrawlsFilesDao
+from jobs_ranker.joblist.labeled import LabeledJobs, LabelsAPI
+from jobs_ranker.ml.descriptions_similarity import deduplicate
+from jobs_ranker.ml import regression
+from jobs_ranker.tasks.configs import TaskConfig, TasksConfigsDao
 
-from jobs_rank.utils.logger import logger
+from jobs_ranker.utils.logger import logger
 
 
 class RankerAPI(abc.ABC):
-    pos_label = ''
-    neg_label = ''
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def loaded(self):
         return False
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def busy(self):
         return False
+
+    @property
+    @abc.abstractmethod
+    def labeler(self):
+        return LabelsAPI()
 
     @abc.abstractmethod
     def load_and_process_data(self, background=False):
@@ -37,15 +41,11 @@ class RankerAPI(abc.ABC):
         return pd.Series()
 
     @abc.abstractmethod
-    def is_valid_label(self, label: str):
-        return False
+    def next_unlabeled(self):
+        return ''
 
     @abc.abstractmethod
     def rerank_jobs(self, background=False):
-        pass
-
-    @abc.abstractmethod
-    def add_label(self, url, label):
         pass
 
 
@@ -74,6 +74,8 @@ class JobsRanker(RankerAPI):
         self.df_jobs = None
         self.df_jobs_all = None
         self.intermidiate_score_cols = []
+        self._labels_dao = None
+
         self.dup_dict = {}
         self._unlabeled = None
 
@@ -88,6 +90,14 @@ class JobsRanker(RankerAPI):
     @property
     def busy(self):
         return self._busy_lock.locked()
+
+    @property
+    def labeler(self):
+        if self._labels_dao is None:
+            self._labels_dao = LabeledJobs(task_name=self.task_config.name,
+                                           dup_dict=self.dup_dict)
+            logger.info(self._labels_dao)
+        return self._labels_dao
 
     def _do_in_background(self, func):
         while self._bg_thread is not None and self._bg_thread.is_alive():
@@ -104,7 +114,6 @@ class JobsRanker(RankerAPI):
     def _load_and_process_data(self):
         with self._busy_lock:
             self._read_all_scraped()
-            self._get_labeled_dao()
             self._read_last_scraped(dedup=self.dedup_new)
         if len(self.df_jobs):
             self._rank_jobs()
@@ -124,13 +133,6 @@ class JobsRanker(RankerAPI):
 
     def _read_task_config(self):
         self.task_config = TasksConfigsDao.get_task_config(self.task_config.name)
-
-    def _get_labeled_dao(self):
-        self.labels_dao = LabeledJobs(task_name=self.task_config.name,
-                                      dup_dict=self.dup_dict)
-        self.pos_label = self.labels_dao.pos_label
-        self.neg_label = self.labels_dao.neg_label
-        logger.info(self.labels_dao)
 
     def _read_last_scraped(self, dedup=True):
         if not dedup:
@@ -183,26 +185,13 @@ class JobsRanker(RankerAPI):
     def _unlabeled_gen(self):
         urls = self.df_jobs['url'].tolist()
         for url in urls:
-            if not self.labels_dao.labeled(url):
+            if not self.labeler.labeled(url):
                 yield url
 
     def next_unlabeled(self):
         if self._unlabeled is None:
             self._unlabeled = self._unlabeled_gen()
         return next(self._unlabeled, None)
-
-    def is_valid_label(self, label: str):
-        try:
-            number = float(label.
-                           replace(self.pos_label, '1.0').
-                           replace(self.neg_label, '0.0'))
-            if not 0 <= number <= 1:
-                raise ValueError
-            return True
-
-        except ValueError:
-            logger.error(f'Invalid input : {label}')
-            return False
 
     @staticmethod
     def _extract_numeric_fields(df):
@@ -310,14 +299,14 @@ class JobsRanker(RankerAPI):
     def _train_df_with_labels(self):
         df_jobs_all = self.df_jobs_all.copy()
 
-        labels_df = self.labels_dao.export_df(keep=common.MLParams.dedup_keep)
+        labels_df = self.labeler.export_df(keep=common.MLParams.dedup_keep)
 
         df_train = labels_df.set_index('url'). \
             join(df_jobs_all.set_index('url'), how='left')
 
         df_train[self.target_col] = df_train['label']. \
-            replace(self.pos_label, '1.0'). \
-            replace(self.neg_label, '0.0'). \
+            replace(self.labeler.pos_label, '1.0'). \
+            replace(self.labeler.neg_label, '0.0'). \
             astype(float)
 
         if self.skipped_as_negatives:
@@ -359,17 +348,11 @@ class JobsRanker(RankerAPI):
             logger.warn(f'Not training label regressor due to '
                         f'having only {len(df_train)} samples')
 
-    def add_label(self, url, label):
-        if self.is_valid_label(label):
-            return self.labels_dao.label(url, label)
-        else:
-            raise ValueError()
-
 
 def _extract_numeric_fields_on_row(row):
     row['description'] = (
         str(row['description']).lower().
-            replace('\n', ' ').replace('\t', ' '))
+        replace('\n', ' ').replace('\t', ' '))
 
     row['description_length'] = len(row['description'])
 

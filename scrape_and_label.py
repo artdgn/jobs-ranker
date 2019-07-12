@@ -2,10 +2,10 @@
 
 from argparse import ArgumentParser
 
-from jobs_rank.inputs import text
-from jobs_rank.crawler.scraping import CrawlProcess
-from jobs_rank.joblist.ranking import JobsRanker
-from jobs_rank.tasks.dao import TasksConfigsDao
+from jobs_ranker.inputs import text
+from jobs_ranker.crawler.scraping import CrawlProcess
+from jobs_ranker.joblist.ranking import JobsRanker
+from jobs_ranker.tasks.configs import TasksConfigsDao
 
 
 def parse_args():
@@ -38,16 +38,16 @@ def main():
         crawl_proc.start_scraping()
         crawl_proc.join()
 
-    jobs_ranker = JobsRanker(
+    ranker = JobsRanker(
         task_config=task_config,
         dedup_new=(not args.no_dedup),
         skipped_as_negatives=args.assume_negative)
 
-    jobs_ranker.load_and_process_data(background=False)
+    ranker.load_and_process_data(background=False)
 
-    labeler = text.Labeler(jobs_ranker=jobs_ranker)
+    labeling_loop = text.LabelingLoop(ranker=ranker)
 
-    labeler.label_jobs_loop(recalc_everytime=args.recalc)
+    labeling_loop.run_loop(recalc_everytime=args.recalc)
 
 
 if __name__ == '__main__':

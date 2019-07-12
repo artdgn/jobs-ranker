@@ -1,22 +1,39 @@
+import abc
 import os
 import pandas as pd
 
-from jobs_rank.common import LABELED_ROOT_DIR
-from jobs_rank.utils.logger import logger
+from jobs_ranker.common import LABELED_ROOT_DIR
+from jobs_ranker.utils.logger import logger
 
 
-class LabeledJobs:
+class LabelsAPI(abc.ABC):
     url_col = 'url'
     label_col = 'label'
     pos_label = 'y'
     neg_label = 'n'
+
+    @abc.abstractmethod
+    def is_valid_label(self, label: str):
+        return False
+
+    @abc.abstractmethod
+    def add_label(self, url, label):
+        pass
+
+    @abc.abstractmethod
+    def export_df(self, keep='first'):
+        pd.DataFrame()
+
+
+class LabeledJobs(LabelsAPI):
 
     def __init__(self, task_name, dup_dict=None):
         self.filename = self._task_name_to_filename(task_name)
         self.dup_dict = dup_dict if dup_dict is not None else {}
         self.df = self.load(self.filename)
 
-    def _task_name_to_filename(self, task_name):
+    @staticmethod
+    def _task_name_to_filename(task_name):
         return os.path.join(LABELED_ROOT_DIR, f'{task_name}.csv')
 
     def save(self):
@@ -38,13 +55,26 @@ class LabeledJobs:
     def labeled(self, url):
         return any(self._labeled_url(u) for u in self._urls_with_dups(url))
 
-    def label(self, url, label):
-        if not self.labeled(url):
+    def add_label(self, url, label):
+        if self.is_valid_label(label) and not self.labeled(url):
             # add this url
             self.df = self.df.append(
                 pd.DataFrame({self.url_col: [url], self.label_col: [label]}))
             self.save()
             logger.info(f'Added label: {label} for {url}')
+
+    def is_valid_label(self, label: str):
+        try:
+            number = float(label.
+                           replace(self.pos_label, '1.0').
+                           replace(self.neg_label, '0.0'))
+            if not 0 <= number <= 1:
+                raise ValueError
+            return True
+
+        except ValueError:
+            logger.error(f'Invalid label : {label}')
+            return False
 
     def __repr__(self):
         total = len(self.df)
@@ -67,10 +97,6 @@ class LabeledJobs:
                         urls = self._urls_with_dups(url)
                         df.loc[df[self.url_col].isin(urls), self.label_col] = label
                         df = df.loc[~df[self.url_col].isin(dup_urls[1:])]
-                    # elif keep == 'last':
-                    #     label = df.loc[df[self.url_col].isin(dup_urls)][self.label_col].iloc[-1]
-                    #     self.label(dup_urls[-1], label)
-                    #     df = df.loc[~df[self.url_col].isin(dup_urls[:-1])]
                     else:
                         raise ValueError(f'unsupported "keep" value: {keep}')
 

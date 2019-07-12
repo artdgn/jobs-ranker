@@ -1,11 +1,11 @@
 import sys
 
-from jobs_rank.joblist.ranking import JobsRanker
-from jobs_rank.tasks.dao import TasksConfigsDao
-from jobs_rank.utils.logger import logger
+from jobs_ranker.joblist.ranking import RankerAPI
+from jobs_ranker.tasks.configs import TasksConfigsDao
+from jobs_ranker.utils.logger import logger
 
 
-class Labeler:
+class LabelingLoop:
     _SKIP = 'skip'
     _STOP = 'stop'
     _RECALC = 'recalc'
@@ -14,37 +14,38 @@ class Labeler:
                     'Try turning dedup off to go over duplicates. '
                     'run with --help flag for more info')
 
-    def __init__(self, jobs_ranker: JobsRanker):
-        self.jobs_ranker = jobs_ranker
-        self.y_tok = self.jobs_ranker.pos_label
-        self.n_tok = self.jobs_ranker.neg_label
+    def __init__(self, ranker: RankerAPI):
+        self.ranker = ranker
         self.skipped = set()
 
     def _prompt(self):
+        y_tok = self.ranker.labeler.pos_label
+        n_tok = self.ranker.labeler.neg_label
         return (
             "Rate the job relevance on a scale of 0.0 to 1.0, "
-            f"or use '{self.y_tok}' for yes or '{self.n_tok}' for no.\n"
-            f"Input ( {self.y_tok} / {self.n_tok} / number / "
+            f"or use '{y_tok}' for yes or '{n_tok}' for no.\n"
+            f"Input ( {y_tok} / {n_tok} / number / "
             f"{self._STOP} / {self._RECALC} / {self._SKIP} ): ")
 
-    def label_data(self, data=None):
+    def label_input(self, data=None):
         if data is not None:
             print(str(data))
         return input(self._prompt())
 
-    def end_labeling_message(self, message):
+    @staticmethod
+    def end_labeling_message(message):
         logger.info(message)
 
-    def label_jobs_loop(self, recalc_everytime=False):
-        for url in iter(self.jobs_ranker.next_unlabeled, None):
+    def run_loop(self, recalc_everytime=False):
+        for url in iter(self.ranker.next_unlabeled, None):
 
-            row = self.jobs_ranker.url_data(url)
+            row = self.ranker.url_data(url)
 
-            resp = self.label_data(row)
+            resp = self.label_input(row)
 
             while not (resp in self._CONTROL_TOKENS or
-                       self.jobs_ranker.is_valid_label(str(resp))):
-                resp = self.label_data()
+                       self.ranker.labeler.is_valid_label(str(resp))):
+                resp = self.label_input()
 
             if resp == self._STOP:
                 break
@@ -54,16 +55,16 @@ class Labeler:
                 continue
 
             if resp == self._RECALC:
-                self.jobs_ranker.rerank_jobs()
+                self.ranker.rerank_jobs()
                 continue
 
             # not any of the control_tokens
-            self.jobs_ranker.add_label(url, resp)
+            self.ranker.labeler.add_label(url, resp)
 
             if recalc_everytime:
-                self.jobs_ranker.rerank_jobs()
+                self.ranker.rerank_jobs()
 
-        if self.jobs_ranker.next_unlabeled() is None:
+        if self.ranker.next_unlabeled() is None:
             self.end_labeling_message(self._END_MESSAGE)
 
 
@@ -72,7 +73,8 @@ class TaskChooser:
     def __init__(self, tasks_dao: TasksConfigsDao):
         self.tasks_dao = tasks_dao
 
-    def choose_from_task_list(self, tasks, message, instructions):
+    @staticmethod
+    def choose_from_task_list(tasks, message, instructions):
         numbered_tasks_list = "\n".join(
             [f"\t{i}: {s}" for i, s in zip(range(len(tasks)), tasks)])
 

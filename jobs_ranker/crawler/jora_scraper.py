@@ -32,7 +32,8 @@ class JoraSpider(scrapy.Spider):
         if next_page_url is not None:
             yield scrapy.Request(response.urljoin(self.base_url + next_page_url))
 
-    def parse_job_page(self, response):
+    @staticmethod
+    def parse_job_page(response):
         item = response.meta
         item['description'] = '\n'.join(response.css('.summary ::text').extract())
         yield item

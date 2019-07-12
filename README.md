@@ -1,5 +1,5 @@
 # What : 
-Job-ads Scraper + Relevance "online learner" / recommender + De-duplicator.
+Jobs relevance ranker, learner, deduplicator, and scraper.
 
 # Why: 
 Job-ads are long and confusing and contain too little signal to noise (at least in Australia): 
@@ -8,7 +8,7 @@ Job-ads are long and confusing and contain too little signal to noise (at least 
 - jobs will be reposted as new after a while (after editting).
 - the descriptions are long, annoying to read, and have no standards.
  
-This creates a strong feeling of deja-vu, discomfort, and waste of time and peace of mind. 
+This creates a strong feeling of deja-vu, discomfort, and waste of time. 
 
 Automation and basic ML can help reduce the job-ad reading to a minimum.       
 
@@ -44,7 +44,7 @@ and the user is asked to label the relevance.
 ## Docker:
 1. Make a folder for persisting your data between the scraping runs. E.g. `~/jobs_data`
 2. In the instructions below instead of running `python scrape_and_label.py ...` 
-run `docker run --rm -it -v $(realpath ./jobs_data):/jobs_rank/data artdgn/jobs_rank ...` 
+run `docker run --rm -it -v $(realpath ./jobs_data):/jobs_rank/data artdgn/jobs_ranker ...` 
 
 # Running
 
