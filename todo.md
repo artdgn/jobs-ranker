@@ -1,7 +1,6 @@
 - eng:
     - webapp: 
         - update instructions and readme
-        - docker commands to makefile
         - docker-compose
         - new task
         - rename repo

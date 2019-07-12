@@ -4,7 +4,7 @@ import flask
 import requests
 
 from jobs_ranker.common import HEADERS
-from jobs_ranker.inputs.webapp.task_contexts import TasksSessions
+from jobs_ranker.io.webapp.task_sessions import TasksSessions
 from jobs_ranker.tasks.configs import TasksConfigsDao
 from jobs_ranker.utils.logger import logger
 
@@ -207,9 +207,9 @@ def scrape_start(task_name):
     return flask.redirect(flask.url_for('scrape_task', task_name=task_name))
 
 
-def run_app(debug=False):
+def start_server(debug=False):
     app.run(host='0.0.0.0', debug=debug)
 
 
 if __name__ == '__main__':
-    run_app(debug=True)
+    start_server(debug=True)
