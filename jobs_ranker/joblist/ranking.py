@@ -6,7 +6,7 @@ import pandas as pd
 import re
 
 from jobs_ranker import common
-from jobs_ranker.crawler.scraping import CrawlsFilesDao
+from jobs_ranker.scraping.crawling import CrawlsFilesDao
 from jobs_ranker.joblist.labeled import LabeledJobs, LabelsAPI
 from jobs_ranker.ml.descriptions_similarity import deduplicate
 from jobs_ranker.ml import regression
@@ -126,23 +126,23 @@ class JobsRanker(RankerAPI):
 
     def _rank_jobs(self):
         with self._busy_lock:
-            self._read_task_config()
+            self.task_config = TasksConfigsDao.get_task_config(self.task_config.name)
             self.df_jobs = self._add_model_score(self.df_jobs)
             self.df_jobs = self._sort_jobs(self.df_jobs)
             self._unlabeled = None
 
-    def _read_task_config(self):
-        self.task_config = TasksConfigsDao.get_task_config(self.task_config.name)
-
     def _read_last_scraped(self, dedup=True):
+        full_df = CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source)
         if not dedup:
-            self.df_jobs = CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source)
+            self.df_jobs = full_df
             self._add_duplicates_column()
         else:
-            self.df_jobs = self.df_jobs_all. \
-                               loc[self.df_jobs_all['scraped_file'] == self.recent_crawl_source, :]
-        logger.info(f'most recent scrape DF: {len(self.df_jobs)} ({self.recent_crawl_source}, '
-                    f'all scraped: {len(CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source))})')
+            self.df_jobs = (
+                self.df_jobs_all.loc[self.df_jobs_all['scraped_file'] ==
+                                     self.recent_crawl_source, :])
+        logger.info(f'most recent scrape DF: '
+                    f'{len(self.df_jobs)} ({self.recent_crawl_source}, '
+                    f'all scraped: {len(full_df)})')
 
     def _add_duplicates_column(self):
         dup_no_self = {k: [u for u in v if u != k]
@@ -193,13 +193,6 @@ class JobsRanker(RankerAPI):
             self._unlabeled = self._unlabeled_gen()
         return next(self._unlabeled, None)
 
-    @staticmethod
-    def _extract_numeric_fields(df):
-        if not all(col in df.columns
-                   for col in ['days_age', 'salary_low', 'salary_high']):
-            df = df.apply(_extract_numeric_fields_on_row, axis=1)
-        return df
-
     def _sort_jobs(self, df):
         sort_cols = [self.model_score_col, self.keyword_score_col]
 
@@ -213,6 +206,13 @@ class JobsRanker(RankerAPI):
                     f'(model-score = {self.model_score:.2f}, '
                     f'keyword-score = {self.keyword_score:.2f})')
         df.sort_values(sort_cols, ascending=False, inplace=True)
+        return df
+
+    @staticmethod
+    def _extract_numeric_fields(df):
+        if not all(col in df.columns
+                   for col in ['days_age', 'salary_low', 'salary_high']):
+            df = df.apply(_extract_numeric_fields_on_row, axis=1)
         return df
 
     def _add_keyword_features(self, df):

@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 
 from jobs_ranker.inputs import text
-from jobs_ranker.crawler.scraping import CrawlProcess
+from jobs_ranker.scraping.crawling import CrawlProcess
 from jobs_ranker.joblist.ranking import JobsRanker
 from jobs_ranker.tasks.configs import TasksConfigsDao
 
@@ -15,8 +15,8 @@ def parse_args():
                              "that contains the task configuration")
     parser.add_argument("-s", "--scrape", action="store_true",
                         help="whether to scrape. default false")
-    parser.add_argument("-c", "--http-cache", action="store_true",
-                        help="whether to use http cache (helpful for debugging scraping). default false")
+    parser.add_argument("-c", "--no-http-cache", action="store_false",
+                        help="whether to use http cache (helpful for debugging scraping). default true")
     parser.add_argument("-r", "--recalc", action="store_true",
                         help="whether to recalc model after every new label. default false")
     parser.add_argument("-n", "--no-dedup", action="store_true",
@@ -34,8 +34,8 @@ def main():
 
     if args.scrape:
         crawl_proc = CrawlProcess(task_config=task_config,
-                                  http_cache=args.http_cache)
-        crawl_proc.start_scraping()
+                                  http_cache=not args.no_http_cache)
+        crawl_proc.start()
         crawl_proc.join()
 
     ranker = JobsRanker(

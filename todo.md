@@ -1,26 +1,22 @@
 - eng:
     - webapp: 
-        - rename repo
         - update instructions and readme
-        - clean up naming crawl vs. scrape
         - docker commands to makefile
         - docker-compose
+        - new task
+        - rename repo
 	    - scrape suggestion (based on number of recent negatives / days past)
         - optional parameters (dedup, cache, ..)        
         - styling / css
         - tests
-        - new task           
 	- notifications?
-        
-    - rename task to profile
-    - better readme
     - display closest labeled dup for each + simil score + label
-    - try different models / feat selection again
-    - ranking model instead of regression 
     - refactor dups
     - tests        
     
 - algo:
+    - try different models / feat selection again
+    - ranking model instead of regression 
     - summary / sentiment:
         - https://elitedatascience.com/python-nlp-libraries
         - https://www.reddit.com/r/datascience/comments/8qde2g/sentiment_analysis_in_python_any_pretrained_models/

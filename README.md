@@ -94,7 +94,7 @@ created inside docker will be owned by root.
 
 # Possible questions:
 1. Q: Other job sites? 
-A: You'll need to create a different scraper object and tune the scraping to suit that site. 
+A: You'll need to create a different scraper(spider) object and tune the scraping to suit that site. 
 Refer to the [scrapy docs](https://docs.scrapy.org/en/latest/) 
 and [selector gadget](https://selectorgadget.com/)
 2. Q: Why not Deep Learning, where's ELMO / BERT / GPT2 / $LATEST_NLP_MIRACLE? A: The main goal was to simplify job seeking 

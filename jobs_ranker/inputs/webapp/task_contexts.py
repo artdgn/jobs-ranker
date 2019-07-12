@@ -3,7 +3,7 @@ from multiprocessing import Process
 
 import flask
 
-from jobs_ranker.crawler.scraping import CrawlsFilesDao, CrawlProcess
+from jobs_ranker.scraping.crawling import CrawlsFilesDao, CrawlProcess
 from jobs_ranker.joblist.ranking import JobsRanker
 from jobs_ranker.tasks.configs import TasksConfigsDao
 
@@ -15,8 +15,8 @@ class TaskSession:
         self._cur_urls = set()
         self._ranker = None
         self._skipped = set()
-        self._scraper = None
-        self._scrape_subproc = None
+        self._crawler = None
+        self._crawl_subproc = None
 
     def get_config(self):
         try:
@@ -66,27 +66,27 @@ class TaskSession:
         self._skipped.add(url)
         self._cur_urls.discard(url)
 
-    def _start_scrape(self):
-        self._scraper.start_scraping()
-        self._scraper.join()
+    def _start_crawl(self):
+        self._crawler.start()
+        self._crawler.join()
 
-    def start_scrape(self):
-        self._scraper = CrawlProcess(task_config=self.get_config(),
+    def start_crawl(self):
+        self._crawler = CrawlProcess(task_config=self.get_config(),
                                      http_cache=True)
-        self._scrape_subproc = Process(target=self._start_scrape)
-        self._scrape_subproc.start()
+        self._crawl_subproc = Process(target=self._start_crawl)
+        self._crawl_subproc.start()
 
     @property
-    def scraping(self):
-        return (self._scrape_subproc is not None and
-                self._scrape_subproc.is_alive())
+    def crawling(self):
+        return (self._crawl_subproc is not None and
+                self._crawl_subproc.is_alive())
 
     def days_since_last_crawl(self):
         return CrawlsFilesDao.days_since_last_crawl(self.get_config())
 
     def jobs_in_latest_crawl(self):
-        if self._scraper.crawl_output_path:
-            return CrawlsFilesDao.rows_in_file(self._scraper.crawl_output_path)
+        if self._crawler.crawl_output_path:
+            return CrawlsFilesDao.rows_in_file(self._crawler.crawl_output_path)
         else:
             return 0
 

@@ -11,8 +11,8 @@
 
 BOT_NAME = 'jobs-crawler'
 
-SPIDER_MODULES = ['jora_scraper']
-NEWSPIDER_MODULE = 'jora_scraper'
+SPIDER_MODULES = ['jora_spider']
+NEWSPIDER_MODULE = 'jora_spider'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 # USER_AGENT = 'crawler (+http://www.yourdomain.com)'

@@ -13,7 +13,7 @@ from jobs_ranker.utils.logger import logger
 
 class CrawlProcess:
 
-    def __init__(self, task_config: TaskConfig, http_cache=False):
+    def __init__(self, task_config: TaskConfig, http_cache=True):
         self.task_config = task_config
         self.http_cache = http_cache
         crawl_name = f'jora-{common.CURRENT_DATE}'
@@ -39,7 +39,7 @@ class CrawlProcess:
             'HTTPCACHE_ENABLED': self.http_cache
         }
 
-    def start_scraping(self):
+    def start(self):
 
         joined_start_urls = ','.join(self.task_config.search_urls)
 
@@ -72,7 +72,7 @@ class CrawlsFilesDao:
         try:
             df = pd.read_csv(filename)
         except pandas.errors.EmptyDataError:
-            logger.info(f'found empty scrape file:{filename}. '
+            logger.info(f'found empty crawl file:{filename}. '
                         f'trying to delete.')
             os.remove(filename)
             return pd.DataFrame()
