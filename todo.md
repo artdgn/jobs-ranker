@@ -1,15 +1,15 @@
 - eng:
     - webapp: 
-        - scraping flow
-	    - scrape suggestion (based on number of negatives / days past)
-        - optional parameters (dedup, cache, ..)
+        - rename repo
+        - update instructions and readme
         - clean up naming crawl vs. scrape
+        - docker commands to makefile
+        - docker-compose
+	    - scrape suggestion (based on number of recent negatives / days past)
+        - optional parameters (dedup, cache, ..)        
         - styling / css
         - tests
-        - instructions and readme update
-        - new task
-        - docker commands to makefile
-        - docker-compose   
+        - new task           
 	- notifications?
         
     - rename task to profile

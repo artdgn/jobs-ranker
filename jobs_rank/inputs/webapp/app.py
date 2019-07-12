@@ -179,7 +179,7 @@ def scrape_task(task_name):
     days_since_last = task.days_since_last_crawl()
 
     if task.scraping:
-        n_jobs = task.jobs_in_latest_crawl() if days_since_last == 0 else 0
+        n_jobs = task.jobs_in_latest_crawl() or 0
         return flask.render_template(
             'waiting.html',
             message=(f'Waiting for scraper to finish '

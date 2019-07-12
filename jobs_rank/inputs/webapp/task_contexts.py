@@ -86,8 +86,10 @@ class TaskContext:
         return CrawlsFilesDao.days_since_last_crawl(self.get_config())
 
     def jobs_in_latest_crawl(self):
-        return CrawlsFilesDao.rows_in_last_crawl(self.get_config())
-
+        if self._scraper.crawl_output_path:
+            return CrawlsFilesDao.rows_in_file(self._scraper.crawl_output_path)
+        else:
+            return 0
 
 
 class TasksContexts(collections.defaultdict):

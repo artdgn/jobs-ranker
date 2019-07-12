@@ -1,3 +1,4 @@
+import datetime
 import os
 import subprocess
 
@@ -94,10 +95,9 @@ class CrawlsFilesDao:
     def days_since_last_crawl(cls, task_config: TaskConfig):
         latest = cls.all_crawls(task_config)[-1]
         date = os.path.splitext(latest)[0][-10:]
-        return (pd.to_datetime(common.CURRENT_DATE) -
-                pd.to_datetime(date)).days
+        current_date = datetime.datetime.now().date().isoformat()
+        return (pd.to_datetime(current_date) - pd.to_datetime(date)).days
 
     @classmethod
-    def rows_in_last_crawl(cls, task_config: TaskConfig):
-        latest = cls.all_crawls(task_config)[-1]
-        return len(cls.read_scrapy_file(latest))
+    def rows_in_file(cls, filepath):
+        return len(cls.read_scrapy_file(filepath))
