@@ -6,7 +6,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 setup(
     name='jobs-rank',
     version='0.1.0',
-    description='Jobs relevance ranker, learner, deduplicator, and scraper.',
+    description='Jobs-ads relevance learner, ranker, deduplicator, and scraper',
     long_description=open(os.path.join(here, 'README.md'), encoding='utf-8').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/artdgn/jobs_recommender',

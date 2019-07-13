@@ -34,27 +34,34 @@ class TaskConfig(dict):
 
 
 class TasksConfigsDao:
-    TASKS_DIR = os.path.realpath(os.path.dirname(__file__))
+    TASKS_DIRS = [os.path.realpath(os.path.dirname(__file__)),
+                  os.path.join(common.DATA_DIR, 'tasks')]
 
     @classmethod
     def tasks_in_scope(cls):
-        return [f.split('.json')[0]
-                for f in os.listdir(cls.TASKS_DIR) if '.json' in f]
+        tasks = []
+        for path in cls.TASKS_DIRS:
+            tasks.extend([f.split('.json')[0]
+                          for f in os.listdir(path) if '.json' in f])
+        return tasks
 
     @classmethod
-    def get_task_config(cls, task_name: str):
-        path = task_name
-        if os.path.exists(path):
-            pass
-        else:
-            if os.path.sep not in path:
-                path = os.path.join(cls.TASKS_DIR, task_name)
-            if not path.endswith('.json'):
-                path += '.json'
+    def load_task_config(cls, task_name: str):
+        task_file = task_name
+        if not task_file.endswith('.json'):  # append json
+            task_file += '.json'
 
-        with open(path, 'rt') as f:
+        for folder in cls.TASKS_DIRS:
+            full_path = os.path.join(folder, task_file)
+            if os.path.exists(full_path):
+                break
+        else:
+            raise FileNotFoundError(f"couldn't find task '{task_name}' "
+                                    f"in {cls.TASKS_DIRS}")
+
+        with open(full_path, 'rt') as f:
             task = TaskConfig()
             data = json.load(f)
-            data['name'] = os.path.splitext(os.path.split(path)[1])[0]
+            data['name'] = task_name
             task.update(data)
             return task

@@ -1,20 +1,24 @@
 import os
 import datetime
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+ROOT_DIR = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '..'))
 
-LOG_DIR = os.path.join(ROOT_DIR, 'data/logs')
+DATA_DIR = os.path.join(ROOT_DIR, 'data')
 
-SCRAPY_LOG_DIR = os.path.join(ROOT_DIR, 'data/scrapy_logs')
+LOG_DIR = os.path.join(DATA_DIR, 'logs')
 
-CRAWLS_DIR = os.path.join(ROOT_DIR, 'data/crawls')
+SCRAPY_LOG_DIR = os.path.join(DATA_DIR, 'scrapy_logs')
 
-CRAWLS_JOB_DIR = os.path.join(ROOT_DIR, 'data/crawls_temp')
+CRAWLS_DIR = os.path.join(DATA_DIR, 'crawls')
 
-LABELED_ROOT_DIR = os.path.join(ROOT_DIR, 'data/labeled')
+CRAWLS_JOB_DIR = os.path.join(DATA_DIR, 'crawls_temp')
+
+LABELED_ROOT_DIR = os.path.join(DATA_DIR, 'labeled')
 
 [os.makedirs(path, exist_ok=True) for path in
- [LOG_DIR, SCRAPY_LOG_DIR, CRAWLS_DIR, CRAWLS_JOB_DIR, LABELED_ROOT_DIR]]
+ [DATA_DIR, LOG_DIR, SCRAPY_LOG_DIR,
+  CRAWLS_DIR, CRAWLS_JOB_DIR, LABELED_ROOT_DIR]]
 
 CURRENT_TIMESTAMP = datetime.datetime.now().isoformat()
 CURRENT_DATE = datetime.datetime.now().date().isoformat()

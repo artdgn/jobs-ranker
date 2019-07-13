@@ -84,20 +84,20 @@ class TaskChooser:
 
     def load_or_choose_task(self, task_name):
         try:
-            return self.tasks_dao.get_task_config(task_name)
+            return self.tasks_dao.load_task_config(task_name)
 
         except FileNotFoundError:
             pass
 
         tasks = self.tasks_dao.tasks_in_scope()
 
-        tasks_folder = self.tasks_dao.TASKS_DIR
+        tasks_folders = self.tasks_dao.TASKS_DIRS
 
         tasks.append('.. cancel and exit')
 
-        message = f'Found these tasks in the {tasks_folder} folder:'
+        message = f'Found these tasks in the {tasks_folders} folder:'
 
-        instructions = f'Choose an option number or provide exact path to your task: '
+        instructions = f'Choose an option number: '
 
         resp = self.choose_from_task_list(
             tasks=tasks,

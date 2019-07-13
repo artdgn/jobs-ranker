@@ -20,7 +20,7 @@ class TaskSession:
 
     def get_config(self):
         try:
-            return TasksConfigsDao.get_task_config(self.task_name)
+            return TasksConfigsDao.load_task_config(self.task_name)
         except FileNotFoundError:
             flask.abort(404, f'task "{self.task_name}" not found')
 

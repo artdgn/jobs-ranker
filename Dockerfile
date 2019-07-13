@@ -5,7 +5,7 @@ COPY requirements.txt .
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-ENV APP_DIR=/jobs-ranker
+ENV APP_DIR=/
 
 ADD . ${APP_DIR}
 

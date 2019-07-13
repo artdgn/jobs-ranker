@@ -1,5 +1,5 @@
 # What : 
-Jobs relevance ranker, learner, deduplicator, and scraper.
+Jobs-ads relevance learner, ranker, deduplicator, and scraper.
 
 # Why: 
 Job-ads are long and confusing and contain too little signal to noise (at least in Australia): 
