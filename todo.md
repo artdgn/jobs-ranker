@@ -1,7 +1,6 @@
 - eng:
     - webapp: 
         - update instructions and readme
-        - docker-compose
         - new task
         - rename repo
 	    - scrape suggestion (based on number of recent negatives / days past)

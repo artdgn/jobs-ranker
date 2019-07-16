@@ -97,6 +97,13 @@ def label_url(task_name, url):
             back_url=back_url,
             back_text=f'.. or go back: {back_url}')
 
+    if task.ranker_outdated():
+        reload_url = flask.url_for('reload_ranker', task_name=task_name)
+        logger.info(f'ranker outdated for "{task_name}" (new data scraped)')
+        flask.flash(flask.Markup(
+            f'New data scraped, "Reload" to update: '
+            f'<a href="{reload_url}" class="alert-link">{reload_url}</a>'))
+
     data = task.ranker.url_data(url).drop('url')
 
     if flask.request.method == 'GET':
@@ -157,9 +164,14 @@ def recalc(task_name):
 @app.route('/<task_name>/reload/')
 def reload_ranker(task_name):
     task = tasks[task_name]
-    task.reload_ranker()
-    logger.info(f'reloading ranker: {task_name}')
-    flask.flash(f're-loading data for task "{task_name}"')
+    if task.crawling:
+        logger.info(f'not reloading ranker data because '
+                    f'scraping is in progress: {task_name}')
+        flask.flash(f'Scraping in progress, not reloading data.')
+    else:
+        task.reload_ranker()
+        logger.info(f'reloading ranker: {task_name}')
+        flask.flash(f're-loading data for task "{task_name}"')
     return flask.redirect(flask.url_for('task_description', task_name=task_name))
 
 
@@ -183,7 +195,8 @@ def scrape_task(task_name):
                      f'({n_jobs} jobs in current file)'),
             seconds=30,
             back_url=back_url,
-            back_text=f'Back and reload (will not cancel scrape): {back_url}')
+            back_text=(f'Reload or back (will not cancel scrape, '
+                       f'will reload only if finished): {back_url}'))
 
     start_url = flask.url_for('scrape_start', task_name=task_name)
 

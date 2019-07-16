@@ -33,14 +33,13 @@ class CrawlProcess:
     def _settings_dict(self):
         return {
             'FEED_FORMAT': 'csv',
-            'FEED_URI':  self.crawl_output_path,
+            'FEED_URI': self.crawl_output_path,
             'JOBDIR': self.jobdir_path,
             'LOG_FILE': self.log_path,
             'HTTPCACHE_ENABLED': self.http_cache
         }
 
     def start(self):
-
         joined_start_urls = ','.join(self.task_config.search_urls)
 
         commands = [
@@ -79,7 +78,7 @@ class CrawlsFilesDao:
         else:
             drop_cols = ([col for col in df.columns
                           if col.startswith('download_')] + ['depth'])
-            df.drop(drop_cols, axis=1, inplace=True)
+            df.drop(drop_cols, axis=1, inplace=True, errors='ignore')
             df['scraped_file'] = filename
             return df
 

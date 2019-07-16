@@ -60,9 +60,6 @@ class JobsRanker(RankerAPI):
                  dedup_new=True,
                  skipped_as_negatives=False
                  ):
-        self.all_crawls_sources = CrawlsFilesDao.all_crawls(
-            task_config, raise_on_missing=True)
-        self.recent_crawl_source = self.all_crawls_sources[-1]
         self.task_config = task_config
         self.dedup_new = dedup_new
         self.skipped_as_negatives = skipped_as_negatives
@@ -133,6 +130,8 @@ class JobsRanker(RankerAPI):
             self._unlabeled = None
 
     def _read_last_scraped(self, dedup=True):
+        self.recent_crawl_source = CrawlsFilesDao.all_crawls(
+            task_config=self.task_config)[-1]
         full_df = CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source)
         if not dedup:
             self.df_jobs = full_df
@@ -157,7 +156,8 @@ class JobsRanker(RankerAPI):
         self.df_jobs = pd.merge(self.df_jobs, df_dups, on='url', how='left')
 
     def _read_all_scraped(self):
-        files = list(self.all_crawls_sources) + [self.recent_crawl_source]
+        files = CrawlsFilesDao.all_crawls(
+            self.task_config, raise_on_missing=True)
 
         df_jobs = pd.concat(
             [CrawlsFilesDao.read_scrapy_file(file) for file in files], axis=0). \

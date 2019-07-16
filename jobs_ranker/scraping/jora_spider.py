@@ -5,6 +5,9 @@ class JoraSpider(scrapy.Spider):
     name = 'jora-spider'
     base_url = 'https://au.jora.com'
 
+    export_cols = ["title", "url", "salary",
+                   "date", "company", "description"]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.start_urls = kwargs.get('start_urls').split(',')
@@ -37,4 +40,3 @@ class JoraSpider(scrapy.Spider):
         item = response.meta
         item['description'] = '\n'.join(response.css('.summary ::text').extract())
         yield item
-

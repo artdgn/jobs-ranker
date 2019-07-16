@@ -89,3 +89,6 @@ HTTPCACHE_EXPIRATION_SECS = 86400
 # HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 RETRY_ENABLED = True
+
+from jobs_ranker.scraping.jora_spider import JoraSpider
+FEED_EXPORT_FIELDS = JoraSpider.export_cols

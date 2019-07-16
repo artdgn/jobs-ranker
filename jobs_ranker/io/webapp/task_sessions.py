@@ -1,4 +1,5 @@
 import collections
+import os
 from multiprocessing import Process
 
 import flask
@@ -85,10 +86,20 @@ class TaskSession:
         return CrawlsFilesDao.days_since_last_crawl(self.get_config())
 
     def jobs_in_latest_crawl(self):
-        if self._crawler.crawl_output_path:
+        if (self._crawler.crawl_output_path and
+                os.path.exists(self._crawler.crawl_output_path)):
             return CrawlsFilesDao.rows_in_file(self._crawler.crawl_output_path)
         else:
             return 0
+
+    def ranker_outdated(self):
+        if (self._crawler and
+                not self.crawling and
+                (self.ranker.recent_crawl_source !=
+                 self._crawler.crawl_output_path)):
+            return True
+        else:
+            return False
 
 
 class TasksSessions(collections.defaultdict):
