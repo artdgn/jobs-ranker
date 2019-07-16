@@ -18,6 +18,7 @@ class TaskSession:
         self._skipped = set()
         self._crawler = None
         self._crawl_subproc = None
+        self.recent_edit_attempt = None
 
     def get_config(self):
         try:
@@ -100,6 +101,17 @@ class TaskSession:
             return True
         else:
             return False
+
+    def validate_config(self, text):
+        try:
+            TasksConfigsDao.check_config_json(text)
+            self.recent_edit_attempt = None
+        except ValueError as e:
+            self.recent_edit_attempt = text
+            return str(e)
+
+    def update_config(self, text):
+        TasksConfigsDao.update_config(text)
 
 
 class TasksSessions(collections.defaultdict):

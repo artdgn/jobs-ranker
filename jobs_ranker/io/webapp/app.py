@@ -49,7 +49,42 @@ def task_description(task_name):
         scrape_url=flask.url_for('scrape_task', task_name=task_name),
         label_url=flask.url_for('label_task', task_name=task_name),
         reload_url=flask.url_for('reload_ranker', task_name=task_name),
+        edit_url=flask.url_for('edit_task', task_name=task_name),
         task_data=json.dumps(task.get_config(), indent=4))
+
+
+@app.route('/<task_name>/edit', methods=['GET', 'POST'])
+def edit_task(task_name):
+    task = tasks[task_name]
+    back_url = flask.url_for('task_description', task_name=task_name)
+    if flask.request.method == 'GET':
+        config = task.get_config()
+        config.pop('name', None)
+        text_data = task.recent_edit_attempt or json.dumps(config, indent=1)
+        return flask.render_template(
+            'edit_task.html',
+            back_url=back_url,
+            new_task_url='not/implemented/yet',
+            text_data=text_data
+        )
+    else:  # post
+        form = flask.request.form
+        if form.get('reset'):
+            task.recent_edit_attempt = None
+            flask.flash(f'resetting and discarding changes')
+            return flask.redirect(flask.url_for('edit_task', task_name=task_name))
+
+        text = form.get('text')
+        message = task.validate_config(text)
+        if message:
+            flask.flash(f'Task edit error: {message}')
+            return flask.redirect(flask.url_for('edit_task', task_name=task_name))
+
+        else:
+            task.update_config(text)
+            flask.flash(f'Task edit succesful!')
+            return flask.redirect(back_url)
+
 
 
 @app.route('/<task_name>/label/')

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Job{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+<h2>Controls:</h2>
+<h3>
+    <p><a href="{{ back_url }}">Back: {{ back_url }}</a></p>
+    <p><a href="{{ new_task_url }}">New task: {{ new_task_url }}</a></p>
+</h3>
+<form method="post" id="form">
+    <h3>Task JSON:</h3>
+    <textarea id=text cols=100 rows=40 form="form"
+              name="text" style="font-size: 16px">{{ text_data }}</textarea>
+    <p>
+        <input type=submit name=save value=Save style="font-size: 22px">
+        <input type=submit name=reset value=Reset style="font-size: 22px">
+    </p>
+</form>
+{% endblock %}

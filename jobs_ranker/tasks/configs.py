@@ -65,3 +65,31 @@ class TasksConfigsDao:
             data['name'] = task_name
             task.update(data)
             return task
+
+    @classmethod
+    def check_config_json(cls, text):
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as e:
+            raise ValueError('not a valid JSON') from e
+        config = TaskConfig(**data)
+        for field in [
+            'search_urls',
+            'description_negative',
+            'description_positive',
+            'title_negative',
+            'title_positive',
+        ]:
+            if field not in config:
+                raise ValueError(f'field "{field}" is missing')
+        if not config.search_urls:
+            raise ValueError('"search_urls" key')
+        return True
+
+    @classmethod
+    def update_config(cls, text):
+        cls.check_config_json(text)
+        data = json.loads(text)
+        raise NotImplementedError()
+
+
