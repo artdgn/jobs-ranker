@@ -84,12 +84,12 @@ class TaskChooser:
 
     def load_or_choose_task(self, task_name):
         try:
-            return self.tasks_dao.load_task_config(task_name)
+            return self.tasks_dao.load_config(task_name)
 
         except FileNotFoundError:
             pass
 
-        tasks = self.tasks_dao.tasks_in_scope()
+        tasks = self.tasks_dao.all_names()
 
         tasks_folders = self.tasks_dao.TASKS_DIRS
 

@@ -133,7 +133,7 @@ class JobsRanker(RankerAPI):
 
     def _rank_jobs(self):
         with self._busy_lock:
-            self.task_config = TasksConfigsDao.load_task_config(
+            self.task_config = TasksConfigsDao.load_config(
                 self.task_config.name)
             self.df_jobs = self._add_model_score(self.df_jobs)
             self.df_jobs = self._sort_jobs(self.df_jobs)

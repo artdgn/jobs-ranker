@@ -1,13 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Job{% endblock %}
+{% block title %}Edit task{% endblock %}
 {% block head %}
     {{ super() }}
 {% endblock %}
 {% block content %}
-<h2>Controls:</h2>
 <h3>
-    <p><a href="{{ back_url }}">Back: {{ back_url }}</a></p>
-    <p><a href="{{ new_task_url }}">New task: {{ new_task_url }}</a></p>
+    <a href="{{ back_url }}">Back: {{ back_url }}</a>
 </h3>
 <form method="post" id="form">
     <h3>Task JSON:</h3>

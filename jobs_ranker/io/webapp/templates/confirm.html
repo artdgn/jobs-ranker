@@ -4,7 +4,9 @@
     {{ super() }}
 {% endblock %}
 {% block content %}
-    <h1>{{ message }}</h1>
-    <a href="{{ option_1_url }}"><h1> {{option_1_text}}</h1> </a>
-    <a href="{{ option_2_url }}"><h1> {{option_2_text}}</h1> </a>
+    <h1>
+        {{ message }}
+        <p>{{option_1_text}} <a href="{{ option_1_url }}">{{option_1_url}}</a></p>
+        <p>{{option_2_text}} <a href="{{ option_2_url }}">{{option_2_url}}</a></p>
+    </h1>
 {% endblock %}

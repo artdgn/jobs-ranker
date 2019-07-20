@@ -4,10 +4,12 @@
     {{ super() }}
 {% endblock %}
 {% block content %}
-    <h1>Tasks:</h1>
+    <h1>Available tasks:</h1>
     <ul id="tasks">
     {% for item in task_urls %}
-        <li><a href="{{ item.url }}"><h1>{{ item.name }}</h1></a></li>
+        <li><h1><a href="{{ item['url'] }}">{{ item['name'] }}</a></h1></li>
     {% endfor %}
     </ul>
+    <br>
+    <h1>Create new task: <a href="{{ new_task }}">{{ new_task }}</a></h1>
 {% endblock %}

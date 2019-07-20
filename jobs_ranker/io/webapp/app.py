@@ -24,8 +24,10 @@ def instructions():
 def tasks_list():
     task_urls = [{'name': t,
                   'url': flask.url_for('task_description', task_name=t)}
-                 for t in TasksConfigsDao.tasks_in_scope()]
-    return flask.render_template('tasks_list.html', task_urls=task_urls)
+                 for t in TasksConfigsDao.all_names()]
+    return flask.render_template('tasks_list.html',
+                                 task_urls=task_urls,
+                                 new_task=flask.url_for('new_task'))
 
 
 @app.errorhandler(404)
@@ -63,12 +65,12 @@ def edit_task(task_name):
                         f'press "reset" to discard')
             text_data = task.recent_edit_attempt
         else:
-            text_data = str(task.get_config())
+            data = task.get_config().data_dict()
+            text_data = str(json.dumps(data, indent=2))
 
         return flask.render_template(
             'edit_task.html',
             back_url=back_url,
-            new_task_url='not/implemented/yet',
             text_data=text_data
         )
     else:  # post
@@ -88,6 +90,22 @@ def edit_task(task_name):
             message = str(e)
             flask.flash(f'Task edit error: {message}')
             return flask.redirect(flask.url_for('edit_task', task_name=task_name))
+
+
+@app.route('/tasks/new_task/', methods=['GET', 'POST'])
+def new_task():
+    back_url = flask.url_for('tasks_list')
+    if flask.request.method == 'GET':
+        return flask.render_template('new_task.html', back_url=back_url)
+    else:
+        form = flask.request.form
+        name = form.get('name')
+        try:
+            TasksConfigsDao.new_task(name)
+            return flask.redirect(flask.url_for('edit_task', task_name=name))
+        except ValueError as e:
+            flask.flash(str(e))
+            return flask.redirect(flask.url_for('new_task'))
 
 
 @app.route('/<task_name>/label/')
@@ -223,7 +241,11 @@ def scrape_task(task_name):
     task = tasks[task_name]
     back_url = flask.url_for('reload_ranker', task_name=task_name)
 
-    days_since_last = task.days_since_last_crawl()
+    try:
+        days_since_last = task.days_since_last_crawl()
+    except FileNotFoundError as e:
+        days_since_last = None
+        flask.flash(f'no crawl data found for task (is this a new task?)')
 
     if task.crawling:
         n_jobs = task.jobs_in_latest_crawl() or 0
@@ -240,12 +262,13 @@ def scrape_task(task_name):
 
     return flask.render_template(
         'confirm.html',
-        message=(f'Are you sure you want to start scraping? '
-                 f'latest data is from {days_since_last} day ago'),
+        message=(f'Are you sure you want to start scraping? ' +
+                 (f'latest data is from {days_since_last} day ago'
+                  if days_since_last is not None else '')),
         option_1_url=start_url,
-        option_1_text=f'Start: {start_url}',
+        option_1_text=f'Start:',
         option_2_url=back_url,
-        option_2_text=f'Back and reload data: {back_url}',
+        option_2_text=f'Back and reload data:',
     )
 
 

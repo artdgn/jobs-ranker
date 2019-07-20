@@ -40,19 +40,20 @@ class TaskConfig(dict):
         os.makedirs(path, exist_ok=True)
         return path
 
-    def __str__(self):
+    def data_dict(self):
         copy = self.copy()
         copy.pop('_name')
         copy.pop('_path')
-        return json.dumps(copy, indent=2)
+        return copy
 
 
 class TasksConfigsDao:
-    TASKS_DIRS = [os.path.realpath(os.path.dirname(__file__)),
-                  os.path.join(common.DATA_DIR, 'tasks')]
+    _TASK_DIR_CODE = os.path.realpath(os.path.dirname(__file__))
+    _TASK_DIR_DATA = os.path.join(common.DATA_DIR, 'tasks')
+    TASKS_DIRS = [_TASK_DIR_CODE, _TASK_DIR_DATA]
 
     @classmethod
-    def tasks_in_scope(cls):
+    def all_names(cls):
         tasks = []
         for path in cls.TASKS_DIRS:
             tasks.extend([f.split('.json')[0]
@@ -60,17 +61,14 @@ class TasksConfigsDao:
         return tasks
 
     @classmethod
-    def load_task_config(cls, task_name: str):
-        task_file = task_name
-        if not task_file.endswith('.json'):  # append json
-            task_file += '.json'
-
+    def load_config(cls, task_name: str):
+        task_file = f'{task_name}.json'
         for folder in cls.TASKS_DIRS:
             full_path = os.path.join(folder, task_file)
             if os.path.exists(full_path):
                 break
         else:
-            raise FileNotFoundError(f"couldn't find task '{task_name}' "
+            raise FileNotFoundError(f"couldn't find file '{task_file}' "
                                     f"in {cls.TASKS_DIRS}")
 
         with open(full_path, 'rt') as f:
@@ -79,12 +77,12 @@ class TasksConfigsDao:
                                         **json.load(f))
 
     @classmethod
-    def save_task_config(cls, config: TaskConfig):
+    def _save(cls, config: TaskConfig):
         with open(config.path, 'wt') as f:
-            f.write(str(config))
+            json.dump(config.data_dict(), f)
 
     @classmethod
-    def validate_config_json(cls, text):
+    def _validate_data_json(cls, text):
         try:
             data = json.loads(text)
         except json.JSONDecodeError as e:
@@ -104,8 +102,39 @@ class TasksConfigsDao:
         return config
 
     @classmethod
-    def update_config(cls, task_name, text):
-        orig_config = cls.load_task_config(task_name=task_name)
-        updated_config = cls.validate_config_json(text)
+    def update(cls, task_name, text):
+        orig_config = cls.load_config(task_name=task_name)
+        updated_config = cls._validate_data_json(text)
         orig_config.update(updated_config)
-        cls.save_task_config(config=orig_config)
+        cls._save(config=orig_config)
+
+    @classmethod
+    def _validate_new_name(cls, name):
+        name = name.lower()
+        if not name:
+            raise ValueError('task name is empty')
+        elif ' ' in name:
+            raise ValueError('task name cannot contain spaces')
+        elif name in cls.all_names():
+            raise ValueError(f'task name "{name}" is already taken')
+        else:
+            return name
+
+    @classmethod
+    def new_task(cls, name, copy_from=None):
+        name = cls._validate_new_name(name)
+
+        if copy_from is None:
+            first_name = cls.all_names()[0]
+            copy_from = cls.load_config(task_name=str(first_name))
+
+        if not isinstance(copy_from, TaskConfig):
+            raise ValueError(f'copy_from must be of type '
+                             f'"{TaskConfig.__name__}"')
+
+        config = TaskConfig.from_dict(
+            name=name,
+            path=os.path.join(cls._TASK_DIR_DATA, f'{name}.json'),
+            **copy_from.data_dict())
+        cls._save(config)
+
