@@ -6,9 +6,17 @@ from jobs_ranker import common
 
 class TaskConfig(dict):
 
+    @classmethod
+    def from_dict(cls, name, path, **kwargs):
+        return cls(_name=name, _path=path, **kwargs)
+
     @property
     def name(self):
-        return self['name']
+        return self['_name']
+
+    @property
+    def path(self):
+        return self['_path']
 
     @property
     def search_urls(self):
@@ -31,6 +39,12 @@ class TaskConfig(dict):
         path = os.path.join(common.CRAWLS_JOB_DIR, self.name)
         os.makedirs(path, exist_ok=True)
         return path
+
+    def __str__(self):
+        copy = self.copy()
+        copy.pop('_name')
+        copy.pop('_path')
+        return json.dumps(copy, indent=2)
 
 
 class TasksConfigsDao:
@@ -60,14 +74,17 @@ class TasksConfigsDao:
                                     f"in {cls.TASKS_DIRS}")
 
         with open(full_path, 'rt') as f:
-            task = TaskConfig()
-            data = json.load(f)
-            data['name'] = task_name
-            task.update(data)
-            return task
+            return TaskConfig.from_dict(name=task_name,
+                                        path=full_path,
+                                        **json.load(f))
 
     @classmethod
-    def check_config_json(cls, text):
+    def save_task_config(cls, config: TaskConfig):
+        with open(config.path, 'wt') as f:
+            f.write(str(config))
+
+    @classmethod
+    def validate_config_json(cls, text):
         try:
             data = json.loads(text)
         except json.JSONDecodeError as e:
@@ -83,13 +100,12 @@ class TasksConfigsDao:
             if field not in config:
                 raise ValueError(f'field "{field}" is missing')
         if not config.search_urls:
-            raise ValueError('"search_urls" key')
-        return True
+            raise ValueError('"search_urls" key is empty')
+        return config
 
     @classmethod
-    def update_config(cls, text):
-        cls.check_config_json(text)
-        data = json.loads(text)
-        raise NotImplementedError()
-
-
+    def update_config(cls, task_name, text):
+        orig_config = cls.load_task_config(task_name=task_name)
+        updated_config = cls.validate_config_json(text)
+        orig_config.update(updated_config)
+        cls.save_task_config(config=orig_config)

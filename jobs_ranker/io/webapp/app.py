@@ -40,7 +40,6 @@ def not_found(message):
 @app.route('/<task_name>/')
 def task_description(task_name):
     task = tasks[task_name]
-    task.load_ranker()
 
     return flask.render_template(
         'task_page.html',
@@ -58,9 +57,14 @@ def edit_task(task_name):
     task = tasks[task_name]
     back_url = flask.url_for('task_description', task_name=task_name)
     if flask.request.method == 'GET':
-        config = task.get_config()
-        config.pop('name', None)
-        text_data = task.recent_edit_attempt or json.dumps(config, indent=1)
+
+        if task.recent_edit_attempt:
+            flask.flash(f'continuing previous edit, '
+                        f'press "reset" to discard')
+            text_data = task.recent_edit_attempt
+        else:
+            text_data = str(task.get_config())
+
         return flask.render_template(
             'edit_task.html',
             back_url=back_url,
@@ -69,22 +73,21 @@ def edit_task(task_name):
         )
     else:  # post
         form = flask.request.form
+
         if form.get('reset'):
             task.recent_edit_attempt = None
             flask.flash(f'resetting and discarding changes')
             return flask.redirect(flask.url_for('edit_task', task_name=task_name))
 
-        text = form.get('text')
-        message = task.validate_config(text)
-        if message:
-            flask.flash(f'Task edit error: {message}')
-            return flask.redirect(flask.url_for('edit_task', task_name=task_name))
-
-        else:
-            task.update_config(text)
+        try:
+            task.update_config(form.get('text'))
             flask.flash(f'Task edit succesful!')
             return flask.redirect(back_url)
 
+        except ValueError as e:
+            message = str(e)
+            flask.flash(f'Task edit error: {message}')
+            return flask.redirect(flask.url_for('edit_task', task_name=task_name))
 
 
 @app.route('/<task_name>/label/')
@@ -255,9 +258,9 @@ def scrape_start(task_name):
     return flask.redirect(flask.url_for('scrape_task', task_name=task_name))
 
 
-def start_server(debug=False):
-    app.run(host='0.0.0.0', debug=debug)
+def start_server(debug=False, port=None):
+    app.run(host='0.0.0.0', debug=debug, port=port)
 
 
 if __name__ == '__main__':
-    start_server(debug=True)
+    start_server(debug=True, port=5001)

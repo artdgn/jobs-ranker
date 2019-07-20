@@ -1,5 +1,6 @@
 import collections
 import os
+import functools
 from multiprocessing import Process
 
 import flask
@@ -7,6 +8,17 @@ import flask
 from jobs_ranker.scraping.crawling import CrawlsFilesDao, CrawlProcess
 from jobs_ranker.joblist.ranking import JobsRanker
 from jobs_ranker.tasks.configs import TasksConfigsDao
+
+
+def raise_404_on_filenotfound(func):
+    @functools.wraps(func)
+    def internal(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except FileNotFoundError as e:
+            flask.abort(404, str(e))
+
+    return internal
 
 
 class TaskSession:
@@ -36,6 +48,7 @@ class TaskSession:
             self.reset_urls()
         return self._ranker
 
+    @raise_404_on_filenotfound
     def load_ranker(self):
         if not self.ranker.loaded and not self.ranker.busy:
             self.ranker.load_and_process_data(background=True)
@@ -56,6 +69,7 @@ class TaskSession:
     def reset_urls(self):
         self._cur_urls = set()
 
+    @raise_404_on_filenotfound
     def reload_ranker(self):
         self.ranker.load_and_process_data(background=True)
         self.reset_urls()
@@ -102,16 +116,14 @@ class TaskSession:
         else:
             return False
 
-    def validate_config(self, text):
+    def update_config(self, text):
         try:
-            TasksConfigsDao.check_config_json(text)
+            TasksConfigsDao.update_config(
+                task_name=self.task_name, text=text)
             self.recent_edit_attempt = None
         except ValueError as e:
             self.recent_edit_attempt = text
-            return str(e)
-
-    def update_config(self, text):
-        TasksConfigsDao.update_config(text)
+            raise e
 
 
 class TasksSessions(collections.defaultdict):

@@ -1,6 +1,8 @@
 import abc
+import time
+from concurrent.futures import ThreadPoolExecutor
 from itertools import product
-from threading import Thread, Lock
+from threading import Lock
 
 import pandas as pd
 import re
@@ -76,17 +78,23 @@ class JobsRanker(RankerAPI):
         self.dup_dict = {}
         self._unlabeled = None
 
+        self._bg_executor = ThreadPoolExecutor(max_workers=1)
         self._busy_lock = Lock()
-        self._bg_thread = None
+        self._bg_future = None
         _pandas_console_options()
 
     @property
     def loaded(self):
+        self._check_bg_thread()
         return self.df_jobs is not None
 
     @property
     def busy(self):
         return self._busy_lock.locked()
+
+    def _check_bg_thread(self):
+        if self._bg_future is not None and not self._bg_future.running():
+            self._bg_future.result()
 
     @property
     def labeler(self):
@@ -97,10 +105,12 @@ class JobsRanker(RankerAPI):
         return self._labels_dao
 
     def _do_in_background(self, func):
-        while self._bg_thread is not None and self._bg_thread.is_alive():
-            self._bg_thread.join()
-        self._bg_thread = Thread(target=func)
-        self._bg_thread.start()
+        while self._bg_future is not None and self._bg_future.running():
+            return self._bg_future.cancel()
+        self._bg_future = self._bg_executor.submit(func)
+        # check for errors
+        time.sleep(0.1)
+        self._check_bg_thread()
 
     def load_and_process_data(self, background=False):
         if background:
@@ -353,7 +363,7 @@ class JobsRanker(RankerAPI):
 def _extract_numeric_fields_on_row(row):
     row['description'] = (
         str(row['description']).lower().
-        replace('\n', ' ').replace('\t', ' '))
+            replace('\n', ' ').replace('\t', ' '))
 
     row['description_length'] = len(row['description'])
 
