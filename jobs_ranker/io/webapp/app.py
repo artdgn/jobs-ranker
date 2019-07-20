@@ -51,7 +51,7 @@ def task_description(task_name):
         label_url=flask.url_for('label_task', task_name=task_name),
         reload_url=flask.url_for('reload_ranker', task_name=task_name),
         edit_url=flask.url_for('edit_task', task_name=task_name),
-        task_data=json.dumps(task.get_config(), indent=4))
+        config_data=str(task.get_config()))
 
 
 @app.route('/<task_name>/edit', methods=['GET', 'POST'])
@@ -65,8 +65,7 @@ def edit_task(task_name):
                         f'press "reset" to discard')
             text_data = task.recent_edit_attempt
         else:
-            data = task.get_config().data_dict()
-            text_data = str(json.dumps(data, indent=2))
+            text_data = str(task.get_config())
 
         return flask.render_template(
             'edit_task.html',

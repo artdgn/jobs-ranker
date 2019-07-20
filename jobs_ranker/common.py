@@ -16,9 +16,12 @@ CRAWLS_JOB_DIR = os.path.join(DATA_DIR, 'crawls_temp')
 
 LABELED_ROOT_DIR = os.path.join(DATA_DIR, 'labeled')
 
+TASKS_CONFIGS_DIR = os.path.join(DATA_DIR, 'tasks')
+
 [os.makedirs(path, exist_ok=True) for path in
  [DATA_DIR, LOG_DIR, SCRAPY_LOG_DIR,
-  CRAWLS_DIR, CRAWLS_JOB_DIR, LABELED_ROOT_DIR]]
+  CRAWLS_DIR, CRAWLS_JOB_DIR, LABELED_ROOT_DIR,
+  TASKS_CONFIGS_DIR]]
 
 CURRENT_TIMESTAMP = datetime.datetime.now().isoformat()
 CURRENT_DATE = datetime.datetime.now().date().isoformat()

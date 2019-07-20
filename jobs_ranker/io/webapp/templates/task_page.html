@@ -5,11 +5,12 @@
 {% endblock %}
 {% block content %}
     <h1>Task "{{task_name}}":</h1>
-    <h1>Label: <a href="{{ label_url }}">{{ label_url }}</a></h1>
-    <h1>Scrape: <a href="{{ scrape_url }}">{{ scrape_url }}</a></h1>
+    <h1>View jobs and Label: <a href="{{ label_url }}">{{ label_url }}</a></h1>
+    <h1>Scrape for new jobs: <a href="{{ scrape_url }}">{{ scrape_url }}</a></h1>
+    <h1>Edit task definition: <a href="{{ edit_url }}">{{ edit_url }}</a></h1>
     <h1>Reload and recalc: <a href="{{ reload_url }}">{{ reload_url }}</a></h1>
     <h1>Back: <a href="{{ back_url }}">{{ back_url }}</a></h1>
-    <h2>Task data: </h2>
-    <h1>Edit: <a href="{{ edit_url }}">{{ edit_url }}</a></h1>
-    <pre id="json"><span class="inner-pre" style="font-size: 18px">{{ task_data }}</span></pre>
+    <br>
+    <h2>Task definition: </h2>
+    <pre id="json"><span class="inner-pre" style="font-size: 18px">{{ config_data }}</span></pre>
 {% endblock %}

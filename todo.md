@@ -1,8 +1,5 @@
 - eng:
-    - webapp:
-        - edit task
-        - new task  
-        - update instructions and readme               
+    - webapp:     
         - rename repo
 	    - scrape suggestion (based on number of recent negatives / days past)
         - optional parameters (dedup, cache, ..)        

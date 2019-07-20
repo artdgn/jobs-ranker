@@ -10,19 +10,21 @@ from jobs_ranker.tasks.configs import TasksConfigsDao
 
 def parse_args():
     parser = ArgumentParser()
-    parser.add_argument("-t", "--task-json", type=str, default="",
-                        help="path to json file or task name with file in the ./data dir "
+    parser.add_argument("-t", "--task-name", type=str, default="",
+                        help="task name that corresponds to a "
+                             "file in the ./data/tasks/ dir"
                              "that contains the task configuration")
     parser.add_argument("-s", "--scrape", action="store_true",
                         help="whether to scrape. default false")
-    parser.add_argument("-c", "--no-http-cache", action="store_false",
-                        help="whether to use http cache (helpful for debugging scraping). default true")
     parser.add_argument("-r", "--recalc", action="store_true",
-                        help="whether to recalc model after every new label. default false")
+                        help="whether to recalc model after every new "
+                             "label. default false")
     parser.add_argument("-n", "--no-dedup", action="store_true",
-                        help="prevent deduplication of newest scrapes w/r to historic scrapes. default false")
+                        help="prevent deduplication of newest scrapes w/r to"
+                             " historic scrapes. default false")
     parser.add_argument("-a", "--assume-negative", action="store_true",
-                        help="assume jobs left unlabeled previously as labeled negative. default false")
+                        help="assume jobs left unlabeled previously as "
+                             "labeled negative. default false")
     return parser.parse_args()
 
 
@@ -33,8 +35,7 @@ def main():
     task_config = task_chooser.load_or_choose_task(task_name=args.task_json)
 
     if args.scrape:
-        crawl_proc = CrawlProcess(task_config=task_config,
-                                  http_cache=not args.no_http_cache)
+        crawl_proc = CrawlProcess(task_config=task_config)
         crawl_proc.start()
         crawl_proc.join()
 

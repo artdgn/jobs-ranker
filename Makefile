@@ -9,12 +9,12 @@ DOCKER_TIME_ARG=-e TZ=$(shell cat /etc/timezone)
 venv:
 	python3.6 -m venv $(VENV_NAME)
 
-requirements: venv
+requirements.txt: venv
 	$(VENV_ACTIVATE); \
 	pip install -U pip pip-tools; \
 	pip-compile requirements.in
 
-install: requirements
+install: venv requirements.txt
 	$(VENV_ACTIVATE); \
 	pip install -r requirements.txt
 
@@ -48,8 +48,8 @@ docker-server: build-docker
 	$(DOCKER_TAG) python server.py
 
 docker-server-update:
-	docker rm -f $(REPO_NAME) || \
-	$(MAKE) docker-server
+	docker rm -f $(REPO_NAME) || sleep 1
+	make docker-server
 
 docker-server-logs:
 	docker logs $(REPO_NAME) -f

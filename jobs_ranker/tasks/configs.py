@@ -46,11 +46,13 @@ class TaskConfig(dict):
         copy.pop('_path')
         return copy
 
+    def __str__(self):
+        return json.dumps(self.data_dict(), indent=2)
+
 
 class TasksConfigsDao:
     _TASK_DIR_CODE = os.path.realpath(os.path.dirname(__file__))
-    _TASK_DIR_DATA = os.path.join(common.DATA_DIR, 'tasks')
-    TASKS_DIRS = [_TASK_DIR_CODE, _TASK_DIR_DATA]
+    TASKS_DIRS = [_TASK_DIR_CODE, common.TASKS_CONFIGS_DIR]
 
     @classmethod
     def all_names(cls):
@@ -134,7 +136,7 @@ class TasksConfigsDao:
 
         config = TaskConfig.from_dict(
             name=name,
-            path=os.path.join(cls._TASK_DIR_DATA, f'{name}.json'),
+            path=os.path.join(common.TASKS_CONFIGS_DIR, f'{name}.json'),
             **copy_from.data_dict())
         cls._save(config)
 
