@@ -55,4 +55,4 @@ docker-server-logs:
 	docker logs $(REPO_NAME) -f
 
 chown-dirs:
-	@echo chown $(shell id -u):$(shell id -u) -R .
+	sudo chown $(shell id -u):$(shell id -u) -R .

@@ -33,7 +33,7 @@ class CrawlProcess:
     def _settings_dict(self):
         return {
             'FEED_FORMAT': 'csv',
-            'FEED_URI': self.crawl_output_path,
+            'FEED_URI': f'file://{self.crawl_output_path}',
             'JOBDIR': self.jobdir_path,
             'LOG_FILE': self.log_path,
             'HTTPCACHE_ENABLED': self.http_cache
@@ -62,8 +62,8 @@ class CrawlProcess:
 
     def join(self):
         out, err = self.subproc.communicate()
-        out = out.strip()
-        err = err.strip()
+        out = out.strip().decode()
+        err = err.strip().decode()
         if out:
             logger.info(f'crawl process stdout:\n{out}')
         if err:
@@ -77,9 +77,6 @@ class CrawlsFilesDao:
         try:
             df = pd.read_csv(filename)
         except pandas.errors.EmptyDataError:
-            logger.info(f'found empty crawl file:{filename}. '
-                        f'trying to delete.')
-            os.remove(filename)
             return pd.DataFrame()
         else:
             drop_cols = ([col for col in df.columns
@@ -89,9 +86,15 @@ class CrawlsFilesDao:
             return df
 
     @staticmethod
-    def all_crawls(task_config: TaskConfig, raise_on_missing=True):
+    def all_crawls(task_config: TaskConfig,
+                   raise_on_missing=True,
+                   ignore_empty=True):
         all_crawls = [os.path.join(task_config.crawls_dir, f)
                       for f in sorted(os.listdir(task_config.crawls_dir))]
+
+        if ignore_empty:
+            all_crawls = [path for path in all_crawls if os.stat(path).st_size]
+
         if raise_on_missing and not all_crawls:
             raise FileNotFoundError(
                 f'No crawls found for task "{task_config.name}", '
