@@ -87,8 +87,7 @@ class TaskSession:
         self._crawler.join()
 
     def start_crawl(self):
-        self._crawler = CrawlProcess(task_config=self.get_config(),
-                                     http_cache=True)
+        self._crawler = CrawlProcess(task_config=self.get_config())
         self._crawl_subproc = Process(target=self._start_crawl)
         self._crawl_subproc.start()
 

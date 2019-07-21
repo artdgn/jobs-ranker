@@ -223,6 +223,10 @@ def reload_ranker(task_name):
         logger.info(f'not reloading ranker data because '
                     f'scraping is in progress: {task_name}')
         flask.flash(f'Scraping in progress, not reloading data.')
+    if task.ranker.busy:
+        logger.info(f'not reloading ranker data because '
+                    f'ranker is busy (reloading or recalculating): {task_name}')
+        flask.flash(f'Ranker is busy, not reloading data.')
     else:
         task.reload_ranker()
         logger.info(f'reloading ranker: {task_name}')

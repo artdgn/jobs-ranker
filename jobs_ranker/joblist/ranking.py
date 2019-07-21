@@ -106,7 +106,7 @@ class JobsRanker(RankerAPI):
 
     def _do_in_background(self, func):
         while self._bg_future is not None and self._bg_future.running():
-            return self._bg_future.cancel()
+            return self._bg_future.result()
         self._bg_future = self._bg_executor.submit(func)
         # check for errors
         time.sleep(0.1)

@@ -1,6 +1,8 @@
 - eng:
     - webapp:     
-        - rename repo
+        - labels history
+        - scraping progress (logs file path, output file path)
+        - less confusing scrape / realod / recalc flow and instructions
 	    - scrape suggestion (based on number of recent negatives / days past)
         - optional parameters (dedup, cache, ..)        
         - styling / css

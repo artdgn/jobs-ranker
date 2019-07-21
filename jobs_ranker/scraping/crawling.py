@@ -13,7 +13,7 @@ from jobs_ranker.utils.logger import logger
 
 class CrawlProcess:
 
-    def __init__(self, task_config: TaskConfig, http_cache=True):
+    def __init__(self, task_config: TaskConfig, http_cache=False):
         self.task_config = task_config
         self.http_cache = http_cache
         crawl_name = f'jora-{common.CURRENT_DATE}'
@@ -61,7 +61,13 @@ class CrawlProcess:
                     f'output file at {self.crawl_output_path}')
 
     def join(self):
-        self.subproc.communicate()
+        out, err = self.subproc.communicate()
+        out = out.strip()
+        err = err.strip()
+        if out:
+            logger.info(f'crawl process stdout:\n{out}')
+        if err:
+            logger.info(f'crawl process stderr:\n{err}')
 
 
 class CrawlsFilesDao:
