@@ -1,23 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class=flashes>
-    {% for message in messages %}
-      <li> message: {{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
-{% endwith %}
-<head>
+  <head>
     {% block head %}
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    {% block styles %}
+    <!-- Bootstrap CSS -->
+    {{ bootstrap.load_css() }}
     {% endblock %}
-</head>
-<body>
-    <div id="content">{% block content %}{% endblock %}</div>
-    <div id="footer">
-        {% block footer %}
-        {% endblock %}
-    </div>
-</body>
+
+    <title>Your page title</title>
+    {% endblock %}
+  </head>
+  <body>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class=flashes>
+        {% for message in messages %}
+          <li> message: {{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+
+    {% block scripts %}
+    <!-- Optional JavaScript -->
+    <!--{{ bootstrap.load_js() }} -->
+    {% endblock %}
+  </body>
 </html>

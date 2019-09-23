@@ -7,9 +7,9 @@
     <h1>Available tasks:</h1>
     <ul id="tasks">
     {% for item in task_urls %}
-        <li><h1><a href="{{ item['url'] }}">{{ item['name'] }}</a></h1></li>
+        <li><h2><a href="{{ item['url'] }}">{{ item['name'] }}</a></h2></li>
     {% endfor %}
     </ul>
     <br>
-    <h1>Create new task: <a href="{{ new_task }}">{{ new_task }}</a></h1>
+    <h3>Create new task: <a href="{{ new_task }}">{{ new_task }}</a></h3>
 {% endblock %}

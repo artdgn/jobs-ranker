@@ -35,6 +35,7 @@ docker-bash: build-docker
 	docker run --rm -it \
 	$(DOCKER_DATA_ARG) \
 	$(DOCKER_TIME_ARG) \
+	--network="host" \
 	--name $(REPO_NAME) \
 	$(DOCKER_TAG) bash
 
@@ -43,8 +44,8 @@ docker-server: build-docker
 	$(DOCKER_DATA_ARG) \
 	$(DOCKER_TIME_ARG) \
 	--name $(REPO_NAME) \
+	--network="host" \
 	--restart unless-stopped \
-	-p 5000:5000 \
 	$(DOCKER_TAG) python server.py
 
 docker-server-update:

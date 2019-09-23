@@ -1,7 +1,6 @@
-import json
-
 import flask
 import requests
+from flask_bootstrap import Bootstrap
 
 from jobs_ranker.common import HEADERS
 from jobs_ranker.io.webapp.task_sessions import TasksSessions
@@ -10,6 +9,7 @@ from jobs_ranker.utils.logger import logger
 
 app = flask.Flask(__name__)
 app.secret_key = b'secret'
+bootstrap = Bootstrap(app)
 
 tasks = TasksSessions()
 

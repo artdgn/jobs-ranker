@@ -1,11 +1,13 @@
 - eng:
-    - webapp:     
+    - webapp:
+        - styling / css / bootstrap
+        - display description instead of iframe     
         - labels history
+        - speed up loading, more timing logging        
         - scraping progress (logs file path, output file path)
         - less confusing scrape / realod / recalc flow and instructions
 	    - scrape suggestion (based on number of recent negatives / days past)
         - optional parameters (dedup, cache, ..)        
-        - styling / css
         - tests
 	- notifications?
     - display closest labeled dup for each + simil score + label
