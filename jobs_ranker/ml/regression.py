@@ -13,6 +13,7 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer
 
 from jobs_ranker import common
+from jobs_ranker.utils.instrumentation import LogCallsTimeAndOutput
 from jobs_ranker.utils.logger import logger
 
 SPEARMAN = 'spearman'
@@ -20,7 +21,7 @@ R2 = 'r2'
 MAIN_METRIC = SPEARMAN
 
 
-class FunctionTransformerFeatNames(FunctionTransformer):
+class FunctionTransformerFeatNames(FunctionTransformer, LogCallsTimeAndOutput):
 
     def __init__(self, func=None, name='', validate=False):
         super().__init__(func=func, validate=validate)
@@ -30,15 +31,16 @@ class FunctionTransformerFeatNames(FunctionTransformer):
         return [self._name]
 
 
-class PipelineFeatNames(Pipeline):
+class PipelineFeatNames(Pipeline, LogCallsTimeAndOutput):
 
     def get_feature_names(self):
         return [n for n in self.steps[-1][1].get_feature_names()]
 
 
-class RegPipelineBase(abc.ABC):
+class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
 
     def __init__(self, cat_cols, num_cols):
+        super().__init__()
         self.cat_cols = cat_cols
         self.num_cols = num_cols
 
@@ -76,7 +78,7 @@ class RegPipelineBase(abc.ABC):
                 name=col,
                 validate=False))])
 
-    def _train(self, x, y, test_ratio, target_name=''):
+    def _train_eval(self, x, y, test_ratio, target_name=''):
         # split
         x_train, x_test, y_train, y_test = train_test_split(
             x, y, test_size=test_ratio or common.MLParams.test_ratio)
@@ -87,11 +89,11 @@ class RegPipelineBase(abc.ABC):
         # predict
         y_pred = self.predict(x_test)
 
-        # eval
-        metrics = self.print_metrics(y_test, y_pred, target_name=target_name)
-
         # refit
         self.pipe.fit(x, y)
+
+        # eval
+        metrics = self.print_metrics(y_test, y_pred, target_name=target_name)
 
         return metrics
 
@@ -105,14 +107,14 @@ class RegPipelineBase(abc.ABC):
         logger.info(f"\n {pd.Series(metrics).to_frame(f'{target_name} :').transpose()}")
         return metrics
 
-    def train(self, df, y_col, test_ratio=None, target_name=''):
+    def train_eval(self, df, y_col, test_ratio=None, target_name=''):
 
         if df[y_col].isnull().sum():
             raise ValueError('Target column contains nans')
 
         x, y = df[self.cat_cols + self.num_cols], df[y_col].values
 
-        metrics = self._train(x, y, test_ratio=test_ratio, target_name=target_name)
+        metrics = self._train_eval(x, y, test_ratio=test_ratio, target_name=target_name)
 
         self.print_top_n_features(
             x, y, n=common.InfoParams.top_n_feat, target_name=target_name)
@@ -180,6 +182,23 @@ class RFPipeline(RegPipelineBase):
     def _reg():
         return RandomForestRegressor(
             n_estimators=common.MLParams.rf_n_estimators, oob_score=True, n_jobs=-1)
+
+    def _train_eval(self, x, y, test_ratio, target_name=''):
+        if not test_ratio:
+            # use OOB scores instead test and refit
+            self.pipe.fit(x, y)
+            return self.print_metrics(y, self.reg.oob_prediction_, target_name=target_name)
+        else:
+            return super()._train_eval(x, y, test_ratio=test_ratio, target_name=target_name)
+
+
+class LGBPipeline(RegPipelineBase):
+    @staticmethod
+    def _reg():
+        from lightgbm import LGBMRegressor
+        return LGBMRegressor(
+            n_estimators=common.MLParams.lgbm_n_estimators,
+            learning_rate=common.MLParams.lgbm_learning_rate)
 
 
 def binary_scores(y, y_pred):

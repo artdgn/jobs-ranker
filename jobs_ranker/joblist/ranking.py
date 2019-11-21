@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from itertools import product
 from threading import Lock
 
+import numpy
 import pandas as pd
 
 from jobs_ranker import common
@@ -13,6 +14,7 @@ from jobs_ranker.ml import regression
 from jobs_ranker.ml.descriptions_similarity import deduplicate
 from jobs_ranker.scraping.crawling import CrawlsFilesDao
 from jobs_ranker.tasks.configs import TaskConfig, TasksConfigsDao
+from jobs_ranker.utils.instrumentation import LogCallsTimeAndOutput
 from jobs_ranker.utils.logger import logger
 
 
@@ -50,7 +52,7 @@ class RankerAPI(abc.ABC):
         pass
 
 
-class JobsRanker(RankerAPI):
+class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     keyword_score_col = 'keyword_score'
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
@@ -61,6 +63,7 @@ class JobsRanker(RankerAPI):
                  dedup_new=True,
                  skipped_as_negatives=False
                  ):
+        super().__init__()
         self.task_config = task_config
         self.dedup_new = dedup_new
         self.skipped_as_negatives = skipped_as_negatives
@@ -209,7 +212,7 @@ class JobsRanker(RankerAPI):
         if self.model_score is None or self.keyword_score is None:
             return df  # didn't train
 
-        if self.model_score < self.keyword_score:
+        if self.model_score < self.keyword_score or numpy.isnan(self.model_score):
             sort_cols.reverse()
 
         logger.info(f'Sorting by columns: {sort_cols} '
@@ -279,11 +282,11 @@ class JobsRanker(RankerAPI):
 
         if len(df_train) >= common.MLParams.min_training_samples:
             num_cols = [self.keyword_score_col]
-            self.regressor_salary = regression.RFPipeline(cat_cols=cat_cols,
-                                                          num_cols=num_cols)
-            self.reg_sal_model_score = self.regressor_salary.train(df_train,
-                                                                   y_col=target_col,
-                                                                   target_name='salary')
+            self.regressor_salary = regression.LGBPipeline(cat_cols=cat_cols,
+                                                           num_cols=num_cols)
+            self.reg_sal_model_score = self.regressor_salary.train_eval(df_train,
+                                                                        y_col=target_col,
+                                                                        target_name='salary')
         else:
             logger.warn(f'Not training salary regressor due to '
                         f'having only {len(df_train)} samples')
@@ -341,10 +344,10 @@ class JobsRanker(RankerAPI):
             num_cols = (self.intermidiate_score_cols +
                         [self.keyword_score_col, self.salary_guess_col])
 
-            self.regressor = regression.RFPipeline(cat_cols=cat_cols, num_cols=num_cols)
-            self.model_score = self.regressor.train(df_train,
-                                                    y_col=self.target_col,
-                                                    target_name='label')
+            self.regressor = regression.LGBPipeline(cat_cols=cat_cols, num_cols=num_cols)
+            self.model_score = self.regressor.train_eval(df_train,
+                                                         y_col=self.target_col,
+                                                         target_name='label')
 
             keyword_metrics = regression.score_metrics(
                 df_train[self.keyword_score_col], df_train[self.target_col])

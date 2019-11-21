@@ -6,10 +6,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from jobs_ranker import common
+from jobs_ranker.utils.instrumentation import log_time_and_shape
 
 
+@log_time_and_shape
 def deduplicate(strings, keep=None):
-
     dup_i, dup_j = duplicates_by_tfidf_cosine(strings)
 
     dup_dict_inds = defaultdict(set)
@@ -33,6 +34,7 @@ def deduplicate(strings, keep=None):
     return sorted(list(keep_inds)), dup_dict_inds
 
 
+@log_time_and_shape
 def duplicates_by_tfidf_cosine(strings):
     max_docs_cutoff = max(common.MLParams.dedup_tfidf_max_df_cutoff,
                           int(len(strings) * common.MLParams.dedup_tfidf_max_df_ratio))
@@ -57,7 +59,6 @@ def inspect_simil_threshold(strings, simil_mat, threshold):
 
 
 def print_side_by_side(a, b, size=100):
-
     def buffer_gen(s):
         ind = 0
         while ind < len(s):

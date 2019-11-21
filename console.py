@@ -32,7 +32,7 @@ def main():
     args = parse_args()
 
     task_chooser = text.TaskChooser(tasks_dao=TasksConfigsDao())
-    task_config = task_chooser.load_or_choose_task(task_name=args.task_json)
+    task_config = task_chooser.load_or_choose_task(task_name=args.task_name)
 
     if args.scrape:
         crawl_proc = CrawlProcess(task_config=task_config)

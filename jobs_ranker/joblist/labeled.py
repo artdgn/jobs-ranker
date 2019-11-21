@@ -4,6 +4,7 @@ import pandas as pd
 
 from jobs_ranker.common import LABELED_ROOT_DIR
 from jobs_ranker.utils.logger import logger
+from jobs_ranker.utils.instrumentation import LogCallsTimeAndOutput
 
 
 class LabelsAPI(abc.ABC):
@@ -25,9 +26,10 @@ class LabelsAPI(abc.ABC):
         pd.DataFrame()
 
 
-class LabeledJobs(LabelsAPI):
+class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
 
     def __init__(self, task_name, dup_dict=None):
+        super().__init__()
         self.filename = self._task_name_to_filename(task_name)
         self.dup_dict = dup_dict if dup_dict is not None else {}
         self.df = self.load(self.filename)
