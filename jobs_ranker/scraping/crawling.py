@@ -16,11 +16,11 @@ class CrawlProcess:
     def __init__(self, task_config: TaskConfig, http_cache=False):
         self.task_config = task_config
         self.http_cache = http_cache
-        crawl_name = f'jora-{common.CURRENT_DATE}'
+        crawl_name = f'jora-{common.current_date()}'
 
         self.log_path = os.path.join(
             self.task_config.scrapy_log_dir,
-            f'log-{common.CURRENT_TIMESTAMP}.log')
+            f'log-{common.current_timestamp()}.log')
 
         self.crawl_output_path = os.path.join(
             self.task_config.crawls_dir, f'{crawl_name}.csv')

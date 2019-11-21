@@ -4,7 +4,7 @@ import os
 
 from jobs_ranker import common
 
-log_path = os.path.join(common.LOG_DIR, f'log-{common.CURRENT_TIMESTAMP}.log')
+log_path = os.path.join(common.LOG_DIR, f'log-{common.current_timestamp()}.log')
 
 logFormatter = logging.Formatter("[%(asctime)s %(levelname)s] %(message)s", datefmt='%H:%M:%S')
 logger = logging.getLogger()

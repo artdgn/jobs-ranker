@@ -1,5 +1,5 @@
-import os
 import datetime
+import os
 
 ROOT_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..'))
@@ -23,10 +23,13 @@ TASKS_CONFIGS_DIR = os.path.join(DATA_DIR, 'tasks')
   CRAWLS_DIR, CRAWLS_JOB_DIR, LABELED_ROOT_DIR,
   TASKS_CONFIGS_DIR]]
 
-CURRENT_TIMESTAMP = datetime.datetime.now().isoformat()
-CURRENT_DATE = datetime.datetime.now().date().isoformat()
 
-LOG_FILEPATH = os.path.join(LOG_DIR, f'log_{CURRENT_TIMESTAMP}.txt')
+def current_timestamp():
+    return datetime.datetime.now().isoformat()
+
+
+def current_date():
+    return datetime.datetime.now().date().isoformat()
 
 
 class MLParams:
