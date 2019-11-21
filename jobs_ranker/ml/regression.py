@@ -1,95 +1,23 @@
+import abc
 import itertools
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import scipy.stats
-
+from sklearn.base import RegressorMixin
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import r2_score, roc_auc_score, average_precision_score
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer
 
-from jobs_ranker.utils.logger import logger
 from jobs_ranker import common
+from jobs_ranker.utils.logger import logger
 
 SPEARMAN = 'spearman'
 R2 = 'r2'
 MAIN_METRIC = SPEARMAN
-
-
-class RegressorTrainer:
-
-    def __init__(self, test_ratio=None, target_name=''):
-        # self.cat_cols = cat_cols
-        # self.num_cols = num_cols
-        # self.y_col = y_col
-        # self.eval_on_test = eval_on_test
-        self.target_name = target_name
-
-        if test_ratio is None:
-            test_ratio = common.MLParams.test_ratio
-
-        self.test_ratio = test_ratio
-
-    def train_regressor(self, df, cat_cols, num_cols, y_col, select_cols=False):
-
-        if df[y_col].isnull().sum():
-            raise ValueError('Target column contains nans')
-
-        x, y = df[cat_cols + num_cols], df[y_col].values
-
-        rf_pipe = RFPipeline(cat_cols, num_cols)
-
-        if select_cols:
-            rf_pipe = self.exhaustive_column_selection(
-                cat_cols=cat_cols, num_cols=num_cols, x=x, y=y, metric=MAIN_METRIC)
-
-        # refit
-        rf_pipe.pipe.fit(x, y)
-
-        metrics = rf_pipe.score_and_print_reg_report(
-            y, target_name=self.target_name)
-
-        rf_pipe.print_top_n_features(
-            x, y, n=common.InfoParams.top_n_feat, target_name=self.target_name)
-
-        model_score = metrics[MAIN_METRIC]
-
-        return rf_pipe.pipe, model_score
-
-    def exhaustive_column_selection(self, cat_cols, num_cols, x, y, metric):
-        res = []
-
-        x_train, x_test, y_train, y_test = train_test_split(
-            x, y, test_size=self.test_ratio)
-
-        for cols in all_subsets(cat_cols + num_cols):
-            rf_pipe = RFPipeline(
-                [col for col in cat_cols if col in cols],
-                [col for col in num_cols if col in cols])
-
-            test_metrics = rf_pipe.score_regressor_on_test(
-                x_train[list(cols)], x_test[list(cols)],
-                y_train, y_test)
-
-            res.append((test_metrics[metric], cols))
-
-            logger.info(
-                f'selection {test_metrics} {(test_metrics[metric], cols)}')
-
-        best_cols = sorted(res)[-1][1]
-        logger.info(f'best: {best_cols}')
-
-        return RFPipeline(
-            [col for col in cat_cols if col in best_cols],
-            [col for col in num_cols if col in best_cols])
-
-
-def all_subsets(arr):
-    return itertools.chain(*map(
-        lambda i: itertools.combinations(arr, i), range(1, len(arr) + 1)))
 
 
 class FunctionTransformerFeatNames(FunctionTransformer):
@@ -108,20 +36,27 @@ class PipelineFeatNames(Pipeline):
         return [n for n in self.steps[-1][1].get_feature_names()]
 
 
-class RFPipeline:
+class RegPipelineBase(abc.ABC):
 
     def __init__(self, cat_cols, num_cols):
-        self.rf = RandomForestRegressor(
-            n_estimators=common.MLParams.rf_n_estimators, oob_score=True, n_jobs=-1)
+        self.cat_cols = cat_cols
+        self.num_cols = num_cols
+
+        self.reg = self._reg()
 
         self.transformer = FeatureUnion([
-            *(('tfidf_' + col, self._tfidf_pipe(col)) for col in cat_cols),
-            *(('noop_' + col, self._noop_pipe(col)) for col in num_cols),
+            *(('tfidf_' + col, self._tfidf_pipe(col)) for col in self.cat_cols),
+            *(('noop_' + col, self._noop_pipe(col)) for col in self.num_cols),
         ])
 
         self.pipe = PipelineFeatNames([
             ('transformer', self.transformer),
-            ('regressor', self.rf)])
+            ('regressor', self.reg)])
+
+    @staticmethod
+    @abc.abstractmethod
+    def _reg():
+        return RegressorMixin()
 
     @staticmethod
     def _tfidf_pipe(col):
@@ -141,9 +76,85 @@ class RFPipeline:
                 name=col,
                 validate=False))])
 
+    def _train(self, x, y, test_ratio, target_name=''):
+        # split
+        x_train, x_test, y_train, y_test = train_test_split(
+            x, y, test_size=test_ratio or common.MLParams.test_ratio)
+
+        # fit
+        self.pipe.fit(x_train, y_train)
+
+        # predict
+        y_pred = self.predict(x_test)
+
+        # eval
+        metrics = self.print_metrics(y_test, y_pred, target_name=target_name)
+
+        # refit
+        self.pipe.fit(x, y)
+
+        return metrics
+
+    def predict(self, X, **kwargs):
+        return self.pipe.predict(X, **kwargs)
+
+    def print_metrics(self, y_test, y_pred, target_name):
+        metrics = score_metrics(y_test, y_pred)
+        binary_metrics = binary_scores(y_test, y_pred)
+        logger.info(f"{target_name}, binary scores:\n {binary_metrics}")
+        logger.info(f"\n {pd.Series(metrics).to_frame(f'{target_name} :').transpose()}")
+        return metrics
+
+    def train(self, df, y_col, test_ratio=None, target_name=''):
+
+        if df[y_col].isnull().sum():
+            raise ValueError('Target column contains nans')
+
+        x, y = df[self.cat_cols + self.num_cols], df[y_col].values
+
+        metrics = self._train(x, y, test_ratio=test_ratio, target_name=target_name)
+
+        self.print_top_n_features(
+            x, y, n=common.InfoParams.top_n_feat, target_name=target_name)
+
+        model_score = metrics[MAIN_METRIC]
+
+        return model_score
+
+    @classmethod
+    def exhaustive_column_selection(cls, cat_cols, num_cols, x, y, metric, test_ratio):
+        res = []
+
+        x_train, x_test, y_train, y_test = train_test_split(
+            x, y, test_size=test_ratio or common.MLParams.test_ratio)
+
+        for cols in all_subsets(cat_cols + num_cols):
+            this = cls(
+                [col for col in cat_cols if col in cols],
+                [col for col in num_cols if col in cols])
+
+            this.pipe.fit(x_train[list(cols)], y_train)
+            y_pred = this.pipe.predict(x_test[list(cols)])
+            test_metrics = score_metrics(y_test, y_pred)
+
+            res.append((test_metrics[metric], cols))
+
+            logger.info(
+                f'selection {test_metrics} {(test_metrics[metric], cols)}')
+
+        best_cols = sorted(res)[-1][1]
+        logger.info(f'best: {best_cols}')
+
+        return cls(
+            [col for col in cat_cols if col in best_cols],
+            [col for col in num_cols if col in best_cols])
+
     def print_top_n_features(self, x, y, n=30, target_name=''):
         # names
-        top_n_feat = np.argsort(self.rf.feature_importances_)[-n:]
+        if not hasattr(self.reg, 'feature_importances_'):
+            logger.error(f"regressor {self.reg} doesn't have 'feature_importances_' attribute")
+            return
+        top_n_feat = np.argsort(self.reg.feature_importances_)[-n:]
         feat_names = self.transformer.get_feature_names()
         top_names = np.array(feat_names)[top_n_feat]
 
@@ -162,26 +173,24 @@ class RFPipeline:
         logger.info(f'Top {n} informative features and correlations to '
                     f'{target_name}: \n{df}')
 
-    def score_regressor_on_test(self, x_train, x_test, y_train, y_test):
-        self.pipe.fit(x_train, y_train)
-        y_pred = self.pipe.predict(x_test)
-        return score_metrics(y_test, y_pred)
+
+class RFPipeline(RegPipelineBase):
 
     @staticmethod
-    def describe_vec(vec, name):
-        return pd.Series(vec).describe().to_frame(name).transpose()
+    def _reg():
+        return RandomForestRegressor(
+            n_estimators=common.MLParams.rf_n_estimators, oob_score=True, n_jobs=-1)
 
-    def score_and_print_reg_report(self, y, target_name=''):
-        y_pred = self.rf.oob_prediction_
-        metrics = score_metrics(y, y_pred)
-        if is_binary_target(y):
-            oob_scores = pd.concat([
-                self.describe_vec(self.rf.oob_prediction_[y == 1], 'positives'),
-                self.describe_vec(self.rf.oob_prediction_[y == 0], 'negatives')])
-            logger.info(f"{target_name}, oob scores:\n {oob_scores}")
-        logger.info(
-            f"\n {pd.Series(metrics).to_frame(f'{target_name} :').transpose()}")
-        return metrics
+
+def binary_scores(y, y_pred):
+    if is_binary_target(y):
+        return pd.concat([
+            describe_vec(y_pred[y == 1], 'positives'),
+            describe_vec(y_pred[y == 0], 'negatives')])
+
+
+def describe_vec(vec, name):
+    return pd.Series(vec).describe().to_frame(name).transpose()
 
 
 def is_binary_target(y):
@@ -196,3 +205,8 @@ def score_metrics(y_true, y_pred):
         metrics['auc'] = roc_auc_score(y_true, y_pred)
         metrics['apr'] = average_precision_score(y_true, y_pred)
     return metrics
+
+
+def all_subsets(arr):
+    return itertools.chain(*map(
+        lambda i: itertools.combinations(arr, i), range(1, len(arr) + 1)))

@@ -1,6 +1,5 @@
 - eng:
     - webapp:
-        - styling / css / bootstrap
         - display description instead of iframe     
         - labels history
         - speed up loading, more timing logging        
@@ -15,8 +14,12 @@
     - tests        
     
 - algo:
+    - add years experience feature
+    - keywords hits
+    - autotuning de duping?
+    - regression using lightgbm
     - try different models / feat selection again
-    - ranking model instead of regression 
+    - ranking model instead of regression
     - summary / sentiment:
         - https://elitedatascience.com/python-nlp-libraries
         - https://www.reddit.com/r/datascience/comments/8qde2g/sentiment_analysis_in_python_any_pretrained_models/
