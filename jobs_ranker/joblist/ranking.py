@@ -56,6 +56,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     keyword_score_col = 'keyword_score'
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
+    years_experience_col = 'years_exp_min'
     target_col = 'target'
 
     def __init__(self,
@@ -193,7 +194,8 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
                           'scraped_file', 'salary', 'date'] +
                          self.intermidiate_score_cols)
         row = self.df_jobs.loc[self.df_jobs['url'] == url].iloc[0]
-        return row.drop(not_show_cols).dropna()
+        row_disp = row.drop(not_show_cols).dropna()
+        return row_disp.loc[~row_disp.astype(str).isin(['0', '0.0', '[]'])]
 
     def _unlabeled_gen(self):
         urls = self.df_jobs['url'].tolist()
@@ -221,11 +223,16 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         df.sort_values(sort_cols, ascending=False, inplace=True)
         return df
 
-    @staticmethod
-    def _extract_numeric_fields(df):
+    @classmethod
+    def _extract_numeric_fields(cls, df):
+
         if not all(col in df.columns
                    for col in ['days_age', 'salary_low', 'salary_high']):
             df = df.apply(_extract_numeric_fields_on_row, axis=1)
+
+        if not cls.years_experience_col in df.columns:
+            df = _extract_year_experience(df, col_name=cls.years_experience_col)
+
         return df
 
     def _add_keyword_features(self, df):
@@ -238,9 +245,12 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
 
             group_kind = f'{source}_{weight}'
             group_col = group_kind + '_count'
+            group_hits = group_kind + '_hits'
             keywords = self.task_config[group_kind]
-            group_regex = group_named_regex(keywords, group_kind)
+            group_regex = re.compile(group_named_regex(keywords, group_kind))
 
+            df[group_hits] = df[source].apply(lambda s: numpy.unique(re.findall(group_regex, s)))
+            # df[group_hits] = df[source].str.extractall(group_regex).groupby(level=0).agg(set)  # alternative impl
             df[group_col] = df[source].str.count(group_regex)
 
             if group_col not in self.intermidiate_score_cols:
@@ -281,7 +291,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         df_train.dropna(subset=cat_cols + [target_col], inplace=True)
 
         if len(df_train) >= common.MLParams.min_training_samples:
-            num_cols = [self.keyword_score_col]
+            num_cols = [self.keyword_score_col, self.years_experience_col]
             self.regressor_salary = regression.LGBPipeline(cat_cols=cat_cols,
                                                            num_cols=num_cols)
             self.reg_sal_model_score = self.regressor_salary.train_eval(df_train,
@@ -342,7 +352,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
             df_train = self._add_relevance_features(df_train)
 
             num_cols = (self.intermidiate_score_cols +
-                        [self.keyword_score_col, self.salary_guess_col])
+                        [self.keyword_score_col, self.salary_guess_col, self.years_experience_col])
 
             self.regressor = regression.LGBPipeline(cat_cols=cat_cols, num_cols=num_cols)
             self.model_score = self.regressor.train_eval(df_train,
@@ -383,6 +393,17 @@ def _extract_numeric_fields_on_row(row):
     if len(date_nums) == 1:
         row['days_age'] = int(int(date_nums[0]) * date_mult)
     return row
+
+
+def _extract_year_experience(df, col_name):
+    # inspect regexp r'(?P<years>.{1,10}[\d+.{1,3}]?\d+\syears.{1,10})'
+    years_regexp = re.compile(r'(?P<years>\d+)\s*years')
+    df.loc[:, col_name] = (df['description'].str.extractall(years_regexp)
+                           .groupby(level=0)['years'].apply(list)
+                           .apply(lambda l: min([int(el) for el in l])))
+    df.loc[df[col_name] >= 12, col_name] = 0
+    df.loc[df[col_name].isna(), col_name] = 0
+    return df
 
 
 def _pandas_console_options():

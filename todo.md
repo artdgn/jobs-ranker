@@ -14,10 +14,7 @@
     - tests        
     
 - algo:
-    - add years experience feature
-    - keywords hits
     - autotuning de duping?
-    - regression using lightgbm
     - try different models / feat selection again
     - ranking model instead of regression
     - summary / sentiment:
