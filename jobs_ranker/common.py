@@ -37,10 +37,12 @@ class MLParams:
     test_ratio = 0.3
 
     rf_n_estimators = 100
-    lgbm_n_estimators = 300
+
+    reg_tfidf_ngram_range = (1, 3)
+    reg_tfidf_min_df = 3
+
+    lgbm_max_n_estimators = 1000
     lgbm_learning_rate = 0.005
-    rf_tfidf_ngram_range = (1, 3)
-    rf_tfidf_min_df = 3
 
     dedup_tfidf_ngram_range = (1, 3)
     dedup_tfidf_max_df_cutoff = 50
