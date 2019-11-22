@@ -11,6 +11,7 @@ from jobs_ranker.utils.instrumentation import log_time_and_shape
 
 @log_time_and_shape
 def deduplicate(strings, keep=None):
+    strings = np.array(strings).astype(str)
     dup_i, dup_j = duplicates_by_tfidf_cosine(strings)
 
     dup_dict_inds = defaultdict(set)

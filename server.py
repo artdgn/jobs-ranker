@@ -1,4 +1,4 @@
-from jobs_ranker.io.webapp.app import start_server
+from jobs_ranker.ui.webapp.app import start_server
 
 if __name__ == '__main__':
     start_server()

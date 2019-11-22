@@ -44,7 +44,7 @@ class MLParams:
     lgbm_max_n_estimators = 1000
     lgbm_learning_rate = 0.005
 
-    dedup_tfidf_ngram_range = (1, 3)
+    dedup_tfidf_ngram_range = (3, 3)
     dedup_tfidf_max_df_cutoff = 50
     dedup_tfidf_max_df_ratio = 0.02
     dedup_simil_thershold = 0.5

@@ -1,27 +1,26 @@
 REPO_NAME=jobs-ranker
-VENV_NAME=venv
-VENV_ACTIVATE=. $(VENV_NAME)/bin/activate
-PYTHON=$(VENV_NAME)/bin/python3
+VENV_ACTIVATE=. .venv/bin/activate
+PYTHON=.venv/bin/python3
 DOCKER_TAG=artdgn/$(REPO_NAME)
 DOCKER_DATA_ARG=-v $(realpath ./data):/data
 DOCKER_TIME_ARG=-e TZ=$(shell cat /etc/timezone)
 
-venv:
-	python3.6 -m venv $(VENV_NAME)
+.venv:
+	python3.6 -m venv .venv
 
-requirements.txt: venv
+requirements.txt: .venv
 	$(VENV_ACTIVATE); \
 	pip install -U pip pip-tools; \
 	pip-compile requirements.in
 
-install: venv requirements.txt
+install: .venv requirements.txt
 	$(VENV_ACTIVATE); \
 	pip install -r requirements.txt
 
 python:
 	@echo $(PYTHON)
 
-server: venv
+server: .venv
 	$(VENV_ACTIVATE); \
 	python server.py
 

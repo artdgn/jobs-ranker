@@ -3,7 +3,7 @@ import requests
 from flask_bootstrap import Bootstrap
 
 from jobs_ranker.common import HEADERS
-from jobs_ranker.io.webapp.task_sessions import TasksSessions
+from jobs_ranker.ui.webapp.task_sessions import TasksSessions
 from jobs_ranker.tasks.configs import TasksConfigsDao
 from jobs_ranker.utils.logger import logger
 

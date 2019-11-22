@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 
-from jobs_ranker.io import text
+from jobs_ranker.ui import text
 from jobs_ranker.scraping.crawling import CrawlProcess
 from jobs_ranker.joblist.ranking import JobsRanker
 from jobs_ranker.tasks.configs import TasksConfigsDao
