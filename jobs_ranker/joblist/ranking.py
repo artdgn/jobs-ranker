@@ -174,7 +174,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
 
         df_jobs = pd.concat(
             [CrawlsFilesDao.read_scrapy_file(file) for file in files], axis=0). \
-            drop_duplicates(subset=['url']). \
+            drop_duplicates(subset=['url'], keep='last'). \
             dropna(subset=['description'])
 
         keep_inds, dup_dict_inds = deduplicate(

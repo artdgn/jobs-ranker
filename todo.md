@@ -1,7 +1,7 @@
 - eng:
     - webapp:
         - display description instead of iframe     
-        - labels history
+        - labels history and editing
         - speed up loading, more timing logging        
         - scraping progress (logs file path, output file path)
         - less confusing scrape / realod / recalc flow and instructions
@@ -14,6 +14,9 @@
     - tests        
     
 - algo:
+    - time added for labels
+    - purge unneeded data from history (dups, scrapes)
+    - time window of relevance     
     - autotuning de duping?
     - try different models / feat selection again
     - ranking model instead of regression
@@ -22,6 +25,7 @@
         - https://www.reddit.com/r/datascience/comments/8qde2g/sentiment_analysis_in_python_any_pretrained_models/
         - http://nlp.town/blog/off-the-shelf-sentiment-analysis/  
     - model improvement:
+        - lemmatisation
         - only use NER words
         - w2v / sent2vec
         - self-supervision (title prediction) pretraining
