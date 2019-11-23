@@ -96,9 +96,10 @@ class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
 
     def print_metrics(self, y_test, y_pred, target_name):
         metrics = score_metrics(y_test, y_pred)
-        binary_metrics = binary_scores(y_test, y_pred)
-        logger.info(f"{target_name}, binary scores:\n {binary_metrics}")
         logger.info(f"\n {pd.Series(metrics).to_frame(f'{target_name} :').transpose()}")
+        binary_metrics = binary_scores(y_test, y_pred)
+        if binary_metrics is not None:
+            logger.info(f"{target_name}, binary scores:\n {binary_metrics}")
         return metrics
 
     def train_eval(self, df, y_col, test_ratio=None, target_name=''):

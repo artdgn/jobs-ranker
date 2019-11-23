@@ -288,7 +288,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         # cat_cols = ['description']
         cat_cols = ['description', 'title']
         df_train.dropna(subset=cat_cols + [target_col], inplace=True)
-        logger.info(f'training with {len(df_train)} salaries)')
+        logger.info(f'training with {len(df_train)} salaries')
 
         if len(df_train) >= common.MLParams.min_training_samples:
             num_cols = [self.keyword_score_col, self.years_experience_col]

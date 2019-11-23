@@ -68,6 +68,7 @@ class TaskSession:
 
     def reset_urls(self):
         self._cur_urls = set()
+        self._skipped = set()
 
     @raise_404_on_filenotfound
     def reload_ranker(self):
