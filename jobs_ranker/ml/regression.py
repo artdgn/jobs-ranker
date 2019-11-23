@@ -223,7 +223,8 @@ def binary_scores(y, y_pred):
     if is_binary_target(y):
         return pd.concat([
             describe_vec(y_pred[y == 1], 'positives'),
-            describe_vec(y_pred[y == 0], 'negatives')])
+            describe_vec(y_pred[y == 0], 'negatives')],
+            sort=False)
 
 
 def describe_vec(vec, name):

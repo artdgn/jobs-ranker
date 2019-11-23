@@ -3,9 +3,9 @@ import requests
 from flask_bootstrap import Bootstrap
 
 from jobs_ranker.common import HEADERS
-from jobs_ranker.ui.webapp.task_sessions import TasksSessions
 from jobs_ranker.tasks.configs import TasksConfigsDao
-from jobs_ranker.utils.logger import logger
+from jobs_ranker.ui.webapp.task_sessions import TasksSessions
+from jobs_ranker.utils.logger import logger, log_path
 
 app = flask.Flask(__name__)
 app.secret_key = b'secret'
@@ -282,6 +282,13 @@ def scrape_start(task_name):
     logger.info(f'started scraping for {task_name}')
     flask.flash(f'Started scraping for task "{task_name}"')
     return flask.redirect(flask.url_for('scrape_task', task_name=task_name))
+
+
+@app.route('/log')
+@app.route('/logs')
+def server_logs():
+    with open(log_path) as log_file:
+        return flask.render_template('textfile.html', text=log_file.read())
 
 
 def start_server(debug=False, port=None):

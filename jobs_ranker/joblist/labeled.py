@@ -1,15 +1,17 @@
 import abc
 import os
+
 import pandas as pd
 
 from jobs_ranker.common import LABELED_ROOT_DIR
-from jobs_ranker.utils.logger import logger
 from jobs_ranker.utils.instrumentation import LogCallsTimeAndOutput
+from jobs_ranker.utils.logger import logger
 
 
 class LabelsAPI(abc.ABC):
     url_col = 'url'
     label_col = 'label'
+    update_date_col = 'update_date'
     pos_label = 'y'
     neg_label = 'n'
 
@@ -46,7 +48,7 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
             return pd.read_csv(filename). \
                 drop_duplicates(subset=[self.url_col], keep='last')
         else:
-            return pd.DataFrame({self.url_col: [], self.label_col: []})
+            return pd.DataFrame({self.url_col: [], self.label_col: [], self.update_date_col: []})
 
     def _urls_with_dups(self, url):
         return self.dup_dict[url] if url in self.dup_dict else [url]
@@ -61,7 +63,9 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
         if self.is_valid_label(label) and not self.labeled(url):
             # add this url
             self.df = self.df.append(
-                pd.DataFrame({self.url_col: [url], self.label_col: [label]}))
+                pd.DataFrame({self.url_col: [url],
+                              self.label_col: [label],
+                              self.update_date_col: [str(pd.datetime.now())]}))
             self.save()
             logger.info(f'Added label: {label} for {url}')
 

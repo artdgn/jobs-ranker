@@ -172,7 +172,8 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
             self.task_config, raise_on_missing=True)
 
         df_jobs = pd.concat(
-            [CrawlsFilesDao.read_scrapy_file(file) for file in files], axis=0). \
+            [CrawlsFilesDao.read_scrapy_file(file) for file in files],
+            axis=0, sort=False). \
             drop_duplicates(subset=['url'], keep='last'). \
             dropna(subset=['description'])
 

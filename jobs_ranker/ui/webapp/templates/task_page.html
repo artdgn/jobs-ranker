@@ -15,6 +15,9 @@
     <br>
     <h2>Back: <a href="{{ back_url }}">{{ back_url }}</a></h2>
     <br>
+    <h4>Debugging: </h4>
+    <h5>Server logs: <a href="{{ url_for('server_logs') + '#bottom' }}" target="_blank">{{ url_for('server_logs')}}</a></h5>
+    <br>
     <h4>Task definition: </h4>
     <pre id="json"><span class="inner-pre">{{ config_data }}</span></pre>
 {% endblock %}
