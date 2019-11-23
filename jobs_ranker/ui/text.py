@@ -39,7 +39,7 @@ class LabelingLoop:
     def run_loop(self, recalc_everytime=False):
         for url in iter(self.ranker.next_unlabeled, None):
 
-            row = self.ranker.url_data(url)
+            row, _ = self.ranker.url_data(url)
 
             resp = self.label_input(row)
 

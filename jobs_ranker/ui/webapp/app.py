@@ -160,13 +160,15 @@ def label_url(task_name, url):
             f'New data scraped, "Reload" to update: '
             f'<a href="{reload_url}" class="alert-link">{reload_url}</a>'))
 
-    data = task.ranker.url_data(url).drop('url')
+    url_attributes, _ = task.ranker.url_data(url)
+    url_att_html = (url_attributes.drop('url').
+                    to_frame().to_html(header=False, justify='right'))
 
     if flask.request.method == 'GET':
         return flask.render_template(
             'job_page.html',
             job_url=url,
-            url_data=data,
+            url_data=url_att_html,
             skip_url=flask.url_for('skip_url', task_name=task_name, url=url),
             recalc_url=flask.url_for('recalc', task_name=task_name),
             back_url=back_url,

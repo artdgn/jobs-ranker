@@ -13,7 +13,7 @@
 <form method="post">
     <h1>Label the Relevance:</h1>
     <h3><p>
-        <input type=submit name=no value="Not relevant" >
+        <input type=submit name=no value="Not relevant">
         <input type=submit name=yes value="Relevant">
         <input type=text name=label autofocus autocomplete="off" placeholder="..or number between 0 and 1">
         <input type=submit name=button value=Label></p>
@@ -21,7 +21,10 @@
 </form>
 <br>
 <h3>Job Page: <a href="{{ job_url }}" target="_blank">{{ job_url }}</a> </h3>
-<pre id="json"><span class="inner-pre">{{ url_data }}</span></pre>
+<br>
+<style>table, th, td {border: 1px solid black; text-align: left;} table {width: 50%;}</style>
+<h3>{{ url_data|safe }}</h3>
+<pre>{{ job_description }}</pre>
 <br>
 <h1>Job page preview: </h1>
 <iframe src="{{ iframe_url }}" title="Original page" width="1600" height="1600"></iframe>

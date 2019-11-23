@@ -190,12 +190,13 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
                     f'(deduped from {len(df_jobs)})')
 
     def url_data(self, url):
-        not_show_cols = (['description', 'description_length',
+        not_show_cols = (['description', 'raw_description', 'description_length',
                           'scraped_file', 'salary', 'date'] +
                          self.intermidiate_score_cols)
         row = self.df_jobs.loc[self.df_jobs['url'] == url].iloc[0]
         row_disp = row.drop(not_show_cols).dropna()
-        return row_disp.loc[~row_disp.astype(str).isin(['0', '0.0', '[]'])]
+        row_disp = row_disp.loc[~row_disp.astype(str).isin(['0', '0.0', '[]'])]
+        return row_disp, row['raw_description']
 
     def _unlabeled_gen(self):
         urls = self.df_jobs['url'].tolist()
@@ -372,6 +373,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
 
 
 def _extract_numeric_fields_on_row(row):
+    row['raw_description'] = row['description']
     row['description'] = (
         str(row['description']).lower().
             replace('\n', ' ').replace('\t', ' '))
