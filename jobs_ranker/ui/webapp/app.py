@@ -51,6 +51,7 @@ def task_description(task_name):
         label_url=flask.url_for('label_task', task_name=task_name),
         reload_url=flask.url_for('reload_ranker', task_name=task_name),
         edit_url=flask.url_for('edit_task', task_name=task_name),
+        labels_history_url=flask.url_for('labels_history', task_name=task_name),
         config_data=str(task.get_config()))
 
 
@@ -116,7 +117,7 @@ def label_task(task_name):
     if task.ranker.busy:
         return flask.render_template(
             'waiting.html',
-            message='Waiting for ranker to crunch all the data',
+            message='Please wait a bit: calculating rankings',
             seconds=5,
             back_url=back_url,
             back_text=f'.. or go back: {back_url}')
@@ -147,7 +148,7 @@ def label_url(task_name, url):
     if task.ranker.busy:
         return flask.render_template(
             'waiting.html',
-            message='Waiting for ranker to crunch all the data',
+            message='Please wait a bit: calculating rankings',
             seconds=5,
             back_url=back_url,
             back_text=f'.. or go back: {back_url}')
@@ -254,7 +255,7 @@ def scrape_task(task_name):
         n_jobs = task.jobs_in_latest_crawl() or 0
         return flask.render_template(
             'waiting.html',
-            message=(f'Waiting for crawler to finish '
+            message=(f'Please wait: scarping new jobs from job-site'
                      f'({n_jobs} jobs in current file)'),
             seconds=30,
             back_url=back_url,
@@ -284,11 +285,20 @@ def scrape_start(task_name):
     return flask.redirect(flask.url_for('scrape_task', task_name=task_name))
 
 
+@app.route('/<task_name>/labels_history')
+def labels_history(task_name):
+    task = tasks[task_name]
+    task.ranker.labeler.load()
+    styling = "<style> table thead th {text-align:  center;} </style>\n"
+    table = task.ranker.labeler.df.to_html(na_rep='')
+    return flask.render_template('rawtext_or_html.html', html=styling + table)
+
+
 @app.route('/log')
 @app.route('/logs')
 def server_logs():
     with open(log_path) as log_file:
-        return flask.render_template('textfile.html', text=log_file.read())
+        return flask.render_template('rawtext_or_html.html', text=log_file.read())
 
 
 def start_server(debug=False, port=None):

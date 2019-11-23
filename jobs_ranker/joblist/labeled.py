@@ -11,7 +11,7 @@ from jobs_ranker.utils.logger import logger
 class LabelsAPI(abc.ABC):
     url_col = 'url'
     label_col = 'label'
-    update_date_col = 'update_date'
+    timestamp_col = 'timestamp'
     pos_label = 'y'
     neg_label = 'n'
 
@@ -34,7 +34,7 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
         super().__init__()
         self.filename = self._task_name_to_filename(task_name)
         self.dup_dict = dup_dict if dup_dict is not None else {}
-        self.df = self.load(self.filename)
+        self.load()
 
     @staticmethod
     def _task_name_to_filename(task_name):
@@ -43,12 +43,12 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
     def save(self):
         self.df.to_csv(self.filename, index=None)
 
-    def load(self, filename):
-        if os.path.exists(filename):
-            return pd.read_csv(filename). \
+    def load(self):
+        if os.path.exists(self.filename):
+            self.df = pd.read_csv(self.filename). \
                 drop_duplicates(subset=[self.url_col], keep='last')
         else:
-            return pd.DataFrame({self.url_col: [], self.label_col: [], self.update_date_col: []})
+            self.df = pd.DataFrame({self.url_col: [], self.label_col: [], self.timestamp_col: []})
 
     def _urls_with_dups(self, url):
         return self.dup_dict[url] if url in self.dup_dict else [url]
@@ -60,12 +60,12 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
         return any(self._labeled_url(u) for u in self._urls_with_dups(url))
 
     def add_label(self, url, label):
-        if self.is_valid_label(label) and not self.labeled(url):
-            # add this url
+        if self.is_valid_label(label):
+            self.load()
             self.df = self.df.append(
                 pd.DataFrame({self.url_col: [url],
                               self.label_col: [label],
-                              self.update_date_col: [str(pd.datetime.now())]}))
+                              self.timestamp_col: [str(pd.datetime.now())]}))
             self.save()
             logger.info(f'Added label: {label} for {url}')
 
@@ -90,7 +90,7 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
                 f'{pos / total:.1%} pos, '
                 f'{(total - pos - neg) / total:.1%} partial relevance)')
 
-    def export_df(self, keep='first'):
+    def export_df(self):
 
         df = self.df.copy()
 
@@ -98,12 +98,8 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
             if url in df[self.url_col] and url in self.dup_dict and len(self.dup_dict[url]):
                 dup_urls = self.dup_dict[url]
                 if self.labeled(url):
-                    if keep == 'first':
-                        label = df.loc[df[self.url_col].isin(dup_urls)][self.label_col].iloc[0]
-                        urls = self._urls_with_dups(url)
-                        df.loc[df[self.url_col].isin(urls), self.label_col] = label
-                        df = df.loc[~df[self.url_col].isin(dup_urls[1:])]
-                    else:
-                        raise ValueError(f'unsupported "keep" value: {keep}')
-
+                    label = df.loc[df[self.url_col].isin(dup_urls)][self.label_col].iloc[-1]
+                    urls = self._urls_with_dups(url)
+                    df.loc[df[self.url_col].isin(urls), self.label_col] = label
+                    df = df.loc[~df[self.url_col].isin(dup_urls[:-1])]
         return df

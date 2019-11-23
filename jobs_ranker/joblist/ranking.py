@@ -56,7 +56,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     keyword_score_col = 'keyword_score'
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
-    years_experience_col = 'years_exp_min'
+    years_experience_col = 'years_exp_max'
     target_col = 'target'
 
     def __init__(self,
@@ -178,7 +178,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
             dropna(subset=['description'])
 
         keep_inds, dup_dict_inds = deduplicate(
-            df_jobs['description'], keep=common.MLParams.dedup_keep)
+            df_jobs['description'])
 
         urls = df_jobs['url'].values
         self.dup_dict = {urls[i]: urls[sorted([i] + list(dups))]
@@ -321,7 +321,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     def _train_df_with_labels(self):
         df_jobs_all = self.df_jobs_all.copy()
 
-        labels_df = self.labeler.export_df(keep=common.MLParams.dedup_keep)
+        labels_df = self.labeler.export_df()
 
         df_train = labels_df.set_index('url'). \
             join(df_jobs_all.set_index('url'), how='left')

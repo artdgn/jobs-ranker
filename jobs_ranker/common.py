@@ -48,7 +48,6 @@ class MLParams:
     dedup_tfidf_max_df_cutoff = 50
     dedup_tfidf_max_df_ratio = 0.02
     dedup_simil_thershold = 0.5
-    dedup_keep = 'last'
 
 
 class InfoParams:

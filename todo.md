@@ -1,11 +1,7 @@
 - eng:
     - remove unused options and params
     - webapp:
-        - static files:
-            - server log
-            - labels history (df table? reverse order?)
-            - scraping logs / output
-        - display description instead of iframe
+        - display description instead of iframe / css for iframe
         - speed up loading, more timing logging        
 	    - scrape suggestion (based on number of recent negatives / days past)
         - optional parameters (dedup, cache, ..)        
@@ -15,7 +11,6 @@
     - tests        
     
 - algo:
-    - time added for labels
     - autotuning de duping?
     - ranking model instead of regression
     - summary / sentiment:

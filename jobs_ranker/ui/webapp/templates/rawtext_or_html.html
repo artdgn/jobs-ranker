@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Error{% endblock %}
+{% block title %}{% endblock %}
 {% block head %}
     {{ super() }}
 {% endblock %}
 {% block content %}
     <pre id="text"><span class="inner-text">{{ text }}</span></pre>
+    {{ html|safe }}
     <a id="bottom"></a>
 {% endblock %}
