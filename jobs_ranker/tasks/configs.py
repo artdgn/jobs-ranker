@@ -23,6 +23,10 @@ class TaskConfig(dict):
         return self['search_urls']
 
     @property
+    def past_scrapes_relevance_days(self):
+        return int(self.get('past_scrapes_relevance_days', 0) or 0)
+
+    @property
     def crawls_dir(self):
         path = os.path.join(common.CRAWLS_DIR, self.name)
         os.makedirs(path, exist_ok=True)

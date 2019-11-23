@@ -85,8 +85,9 @@ class CrawlsFilesDao:
             df['scraped_file'] = filename
             return df
 
-    @staticmethod
-    def all_crawls(task_config: TaskConfig,
+    @classmethod
+    def get_crawls(cls,
+                   task_config: TaskConfig,
                    raise_on_missing=True,
                    ignore_empty=True):
         all_crawls = [os.path.join(task_config.crawls_dir, f)
@@ -99,14 +100,36 @@ class CrawlsFilesDao:
             raise FileNotFoundError(
                 f'No crawls found for task "{task_config.name}", '
                 f'please run scraping.')
-        return all_crawls
+
+        if task_config.past_scrapes_relevance_days:
+            filtered_crawls = cls._filter_recent(all_crawls, task_config=task_config)
+            logger.info(f'got {len(filtered_crawls)} out of {len(all_crawls)} scrapes '
+                        f'due to past_scrapes_relevance_days={task_config.past_scrapes_relevance_days}')
+            return filtered_crawls
+        else:
+            return all_crawls
+
+    @classmethod
+    def _filter_recent(cls, crawls, task_config: TaskConfig):
+        relevance_days = task_config.past_scrapes_relevance_days
+        latest_date = cls._crawl_date(crawls[-1])
+        return [c for c in crawls
+                if cls._days_difference(latest_date, c) <= relevance_days]
+
+    @staticmethod
+    def _crawl_date(crawl):
+        return os.path.splitext(crawl)[0][-10:]
+
+    @classmethod
+    def _days_difference(cls, date, crawl):
+        return (pd.to_datetime(date) -
+                pd.to_datetime(cls._crawl_date(crawl))).days
 
     @classmethod
     def days_since_last_crawl(cls, task_config: TaskConfig):
-        latest = cls.all_crawls(task_config)[-1]
-        date = os.path.splitext(latest)[0][-10:]
+        latest = cls.get_crawls(task_config)[-1]
         current_date = datetime.datetime.now().date().isoformat()
-        return (pd.to_datetime(current_date) - pd.to_datetime(date)).days
+        return cls._days_difference(current_date, latest)
 
     @classmethod
     def rows_in_file(cls, filepath):

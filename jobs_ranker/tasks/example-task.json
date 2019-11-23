@@ -31,5 +31,6 @@
     "TPS report",
     "cubicles",
     "mainframe"
-  ]
+  ],
+  "past_scrapes_relevance_days": 60
 }

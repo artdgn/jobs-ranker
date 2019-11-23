@@ -1,24 +1,22 @@
 - eng:
+    - remove unused options and params
     - webapp:
-        - display description instead of iframe     
-        - labels history and editing
+        - static files:
+            - server log
+            - labels history (df table? reverse order?)
+            - scraping logs / output
+        - display description instead of iframe
         - speed up loading, more timing logging        
-        - scraping progress (logs file path, output file path)
-        - less confusing scrape / realod / recalc flow and instructions
 	    - scrape suggestion (based on number of recent negatives / days past)
         - optional parameters (dedup, cache, ..)        
         - tests
-	- notifications?
     - display closest labeled dup for each + simil score + label
     - refactor dups
     - tests        
     
 - algo:
     - time added for labels
-    - purge unneeded data from history (dups, scrapes)
-    - time window of relevance     
     - autotuning de duping?
-    - try different models / feat selection again
     - ranking model instead of regression
     - summary / sentiment:
         - https://elitedatascience.com/python-nlp-libraries

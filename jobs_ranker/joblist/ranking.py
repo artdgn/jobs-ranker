@@ -104,7 +104,6 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         if self._labels_dao is None:
             self._labels_dao = LabeledJobs(task_name=self.task_config.name,
                                            dup_dict=self.dup_dict)
-            logger.info(self._labels_dao)
         return self._labels_dao
 
     def _do_in_background(self, func):
@@ -143,7 +142,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
             self._unlabeled = None
 
     def _read_last_scraped(self, dedup=True):
-        self.recent_crawl_source = CrawlsFilesDao.all_crawls(
+        self.recent_crawl_source = CrawlsFilesDao.get_crawls(
             task_config=self.task_config)[-1]
         full_df = CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source)
         if not dedup:
@@ -169,7 +168,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         self.df_jobs = pd.merge(self.df_jobs, df_dups, on='url', how='left')
 
     def _read_all_scraped(self):
-        files = CrawlsFilesDao.all_crawls(
+        files = CrawlsFilesDao.get_crawls(
             self.task_config, raise_on_missing=True)
 
         df_jobs = pd.concat(
@@ -289,6 +288,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         # cat_cols = ['description']
         cat_cols = ['description', 'title']
         df_train.dropna(subset=cat_cols + [target_col], inplace=True)
+        logger.info(f'training with {len(df_train)} salaries)')
 
         if len(df_train) >= common.MLParams.min_training_samples:
             num_cols = [self.keyword_score_col, self.years_experience_col]
@@ -347,6 +347,9 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         cat_cols = ['description', 'title']
 
         df_train.dropna(subset=cat_cols, inplace=True)
+
+        logger.info(f'training with {len(df_train)} labels out of {self._labels_dao} '
+                    f'due to missing data (possibly due to date filtering)')
 
         if len(df_train) >= common.MLParams.min_training_samples:
             df_train = self._add_relevance_features(df_train)
