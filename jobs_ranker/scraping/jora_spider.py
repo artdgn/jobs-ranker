@@ -6,7 +6,8 @@ class JoraSpider(scrapy.Spider):
     base_url = 'https://au.jora.com'
 
     export_cols = ["title", "url", "salary",
-                   "date", "company", "description"]
+                   "date", "company", "description",
+                   "raw_description"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,5 +39,15 @@ class JoraSpider(scrapy.Spider):
     @staticmethod
     def parse_job_page(response):
         item = response.meta
+        item['raw_description'] = response.css('.summary').extract()
         item['description'] = '\n'.join(response.css('.summary ::text').extract())
         yield item
+
+
+"""
+debugging scrapy spider:
+add run configuration for:
+1. running module scrapy.cmdline
+2. working dir set to here
+3. command line arguments from the launch command 
+"""

@@ -1,0 +1,24 @@
+body {
+  padding-top: 5px;
+  padding: 10px 10px;
+}
+th{
+  padding: 5px;
+  text-align: center;
+}
+td {
+  padding: 5px;
+  text-align: left;
+}
+.green-button {
+  border: 3px solid #41e823;
+}
+.orange-button {
+  border: 3px solid #eb881e;
+}
+.blue-button {
+  border: 3px solid #236ee8;
+}
+.job-description {
+  width: 50%;
+}

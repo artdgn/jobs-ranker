@@ -4,6 +4,5 @@ numpy
 pandas
 Flask
 requests
-bootstrap-flask
 lightgbm
 psutil

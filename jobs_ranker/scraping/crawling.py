@@ -48,10 +48,14 @@ class CrawlProcess:
         for k, v in self._settings_dict().items():
             commands.extend(['-s', f'{k}="{v}"'])
 
+        scrapy_dir = os.path.dirname(__file__)
+
+        logger.info(f"launching scrapy in dir {scrapy_dir} with:\n\t{' '.join(commands)}")
+
         self.subproc = subprocess.Popen(
             ' '.join(commands),
             shell=True,
-            cwd=os.path.dirname(__file__),
+            cwd=scrapy_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )

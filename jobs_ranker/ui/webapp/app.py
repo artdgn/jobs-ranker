@@ -1,15 +1,11 @@
 import flask
-import requests
-from flask_bootstrap import Bootstrap
 
-from jobs_ranker.common import HEADERS
 from jobs_ranker.tasks.configs import TasksConfigsDao
 from jobs_ranker.ui.webapp.task_sessions import TasksSessions
 from jobs_ranker.utils.logger import logger, log_path
 
 app = flask.Flask(__name__)
 app.secret_key = b'secret'
-bootstrap = Bootstrap(app)
 
 tasks = TasksSessions()
 
@@ -160,19 +156,20 @@ def label_url(task_name, url):
             f'New data scraped, "Reload" to update: '
             f'<a href="{reload_url}" class="alert-link">{reload_url}</a>'))
 
-    url_attributes, _ = task.ranker.url_data(url)
-    url_att_html = (url_attributes.drop('url').
+    url_attributes, raw_description = task.ranker.url_data(url)
+    url_att_html = (url_attributes.drop(['url', 'title']).
                     to_frame().to_html(header=False, justify='right'))
 
     if flask.request.method == 'GET':
         return flask.render_template(
             'job_page.html',
             job_url=url,
+            job_title=url_attributes.get('title'),
+            job_description=raw_description,
             url_data=url_att_html,
             skip_url=flask.url_for('skip_url', task_name=task_name, url=url),
             recalc_url=flask.url_for('recalc', task_name=task_name),
-            back_url=back_url,
-            iframe_url=flask.url_for('source_posting', url=url)
+            back_url=back_url
         )
 
     else:
@@ -237,11 +234,6 @@ def reload_ranker(task_name):
     return flask.redirect(flask.url_for('task_description', task_name=task_name))
 
 
-@app.route('/source_posting/<path:url>')
-def source_posting(url):
-    return requests.get(url, headers=HEADERS).text
-
-
 @app.route('/<task_name>/scrape/')
 def scrape_task(task_name):
     task = tasks[task_name]
@@ -291,9 +283,8 @@ def scrape_start(task_name):
 def labels_history(task_name):
     task = tasks[task_name]
     task.ranker.labeler.load()
-    styling = "<style> table thead th {text-align:  center;} </style>\n"
     table = task.ranker.labeler.df.to_html(na_rep='')
-    return flask.render_template('rawtext_or_html.html', html=styling + table)
+    return flask.render_template('rawtext_or_html.html', html=table)
 
 
 @app.route('/log')

@@ -1,11 +1,8 @@
 - eng:
     - remove unused options and params
-    - webapp:
-        - display description instead of iframe / css for iframe
-        - speed up loading, more timing logging        
-	    - scrape suggestion (based on number of recent negatives / days past)
-        - optional parameters (dedup, cache, ..)        
-        - tests
+    - webapp:        
+        - optional parameters (dedup, cache, ..) - remove or add to task-config
+        - nicer layout        
     - display closest labeled dup for each + simil score + label
     - refactor dups
     - tests        
@@ -24,6 +21,7 @@
         - self-supervision (title prediction) pretraining
     - try some imbalance handling techniques    
     - separate tuning and refitting
+    - tests
     
 - data:
     - other sites (indeed, linked in)
