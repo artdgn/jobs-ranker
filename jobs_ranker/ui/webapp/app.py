@@ -174,10 +174,14 @@ def label_url(task_name, url):
 
     else:
         form = flask.request.form
-        if form.get('no'):
+        if 'numeric' in form:
+            resp = form['label']
+        elif 'no' in form:
             resp = task.ranker.labeler.neg_label
-        elif form.get('yes'):
+        elif 'yes' in form:
             resp = task.ranker.labeler.pos_label
+        elif 'somewhat' in form:
+            resp = '0.5'
         else:
             resp = form['label']
 
