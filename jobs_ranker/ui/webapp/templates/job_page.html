@@ -14,10 +14,10 @@
     <h1>Label the Relevance:</h1>
     <h3><p>
         <input type=submit name=no value="Irrelevant" class="orange-button">
-        <input type=submit name=somewhat value="So-so.." class="blue-button" onclick="copyJobLink()">
-        <input type=submit name=yes value="Relevant" class="green-button" onclick="copyJobLink()">
+        <input type=submit name=somewhat value="So-so.." class="blue-button">
+        <input type=submit name=yes value="Relevant" class="green-button">
         <input type=text name=label id="textField" autofocus autocomplete="off" placeholder="..or number between 0 and 1">
-        <input type=submit name=numeric id="labelButton" value=Label class="blue-button" onclick="copyJobLink()"></p>
+        <input type=submit name=numeric id="labelButton" value=Label class="blue-button"></p>
     </h3>
 </form>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
@@ -25,9 +25,6 @@
 <script>
     document.getElementById('textField')
         .addEventListener('keypress', clickButtonOnEnter('labelButton'));
-    function copyJobLink() {
-        copyToClipboard('#job_link');
-    }
 </script>
 <br>
 <h3>Page: <a id="job_link" href="{{ job_url }}" target="_blank">{{ job_url }}</a> </h3>
