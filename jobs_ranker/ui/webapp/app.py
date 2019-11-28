@@ -194,7 +194,10 @@ def label_url(task_name, url):
                 url=url))
         else:
             task.add_label(url, resp)
-            flask.flash(f'labeled "{resp}" for {url}', 'success')
+            flask.flash(flask.Markup(
+                f"""labeled "{resp}" for <a href="{url}" 
+                class="alert-link" target="_blank"=>{url}</a>"""),
+                'success')
 
         # label next
         return flask.redirect(flask.url_for(
@@ -287,7 +290,7 @@ def scrape_start(task_name):
 def labels_history(task_name):
     task = tasks[task_name]
     task.ranker.labeler.load()
-    table = task.ranker.labeler.df.to_html(na_rep='')
+    table = task.ranker.labeler.df.to_html(na_rep='', render_links=True)
     return flask.render_template('rawtext_or_html.html', html=table)
 
 
