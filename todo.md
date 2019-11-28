@@ -1,10 +1,12 @@
 - eng:
     - remove unused options and params
     - webapp:        
+	    - days relevance to date relevance
         - optional parameters (dedup, cache, ..) - remove or add to task-config
         - nicer layout        
     - display closest labeled dup for each + simil score + label
     - refactor dups
+    - application / status tracking?
     - tests        
     
 - algo:

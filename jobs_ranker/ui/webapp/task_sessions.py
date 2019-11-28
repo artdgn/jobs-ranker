@@ -52,7 +52,7 @@ class TaskSession:
     def load_ranker(self):
         if not self.ranker.loaded and not self.ranker.busy:
             self.ranker.load_and_process_data(background=True)
-            flask.flash(f'loading data for task "{self.task_name}"')
+            flask.flash(f'loading data for task "{self.task_name}"', 'info')
 
     def get_url(self):
         if not self._cur_urls:

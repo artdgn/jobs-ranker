@@ -12,7 +12,7 @@ tasks = TasksSessions()
 
 @app.route('/')
 def instructions():
-    flask.flash(f'redirected to tasks-list')
+    flask.flash(f'redirected to tasks-list', 'info')
     return flask.redirect(flask.url_for('tasks_list'))
 
 
@@ -59,7 +59,7 @@ def edit_task(task_name):
 
         if task.recent_edit_attempt:
             flask.flash(f'continuing previous edit, '
-                        f'press "reset" to discard')
+                        f'press "reset" to discard', 'info')
             text_data = task.recent_edit_attempt
         else:
             text_data = str(task.get_config())
@@ -74,17 +74,17 @@ def edit_task(task_name):
 
         if form.get('reset'):
             task.recent_edit_attempt = None
-            flask.flash(f'resetting and discarding changes')
+            flask.flash(f'resetting and discarding changes', 'warning')
             return flask.redirect(flask.url_for('edit_task', task_name=task_name))
 
         try:
             task.update_config(form.get('text'))
-            flask.flash(f'Task edit succesful!')
+            flask.flash(f'Task edit succesful!', 'success')
             return flask.redirect(back_url)
 
         except ValueError as e:
             message = str(e)
-            flask.flash(f'Task edit error: {message}')
+            flask.flash(f'Task edit error: {message}', 'danger')
             return flask.redirect(flask.url_for('edit_task', task_name=task_name))
 
 
@@ -100,7 +100,7 @@ def new_task():
             TasksConfigsDao.new_task(name)
             return flask.redirect(flask.url_for('edit_task', task_name=name))
         except ValueError as e:
-            flask.flash(str(e))
+            flask.flash(str(e), 'danger')
             return flask.redirect(flask.url_for('new_task'))
 
 
@@ -154,7 +154,7 @@ def label_url(task_name, url):
         logger.info(f'ranker outdated for "{task_name}" (new data scraped)')
         flask.flash(flask.Markup(
             f'New data scraped, "Reload" to update: '
-            f'<a href="{reload_url}" class="alert-link">{reload_url}</a>'))
+            f'<a href="{reload_url}" class="alert-link">{reload_url}</a>'), 'success')
 
     url_attributes, raw_description = task.ranker.url_data(url)
     url_att_html = (url_attributes.drop(['url', 'title']).
@@ -187,14 +187,14 @@ def label_url(task_name, url):
 
         if not task.ranker.labeler.is_valid_label(str(resp)):
             # bad input, render same page again
-            flask.flash(f'not a valid input: "{resp}", please relabel (or skip)')
+            flask.flash(f'not a valid input: "{resp}", please relabel (or skip)', 'danger')
             return flask.redirect(flask.url_for(
                 'label_url',
                 task_name=task_name,
                 url=url))
         else:
             task.add_label(url, resp)
-            flask.flash(f'labeled "{resp}" for ({url})')
+            flask.flash(f'labeled "{resp}" for {url}', 'success')
 
         # label next
         return flask.redirect(flask.url_for(
@@ -207,7 +207,7 @@ def skip_url(task_name, url):
     task = tasks[task_name]
     task.skip(url)
     logger.info(f'skip: {url} for "{task_name}"')
-    flask.flash(f'skipped url {url} for "{task_name}"')
+    flask.flash(f'skipped url {url} for "{task_name}"', 'warning')
     return flask.redirect(flask.url_for('label_task', task_name=task_name))
 
 
@@ -216,7 +216,7 @@ def recalc(task_name):
     task = tasks[task_name]
     task.recalc()
     logger.info(f'recalculating: {task_name}')
-    flask.flash(f're-calculating rankings for task "{task_name}"')
+    flask.flash(f're-calculating rankings for task "{task_name}"', 'info')
     return flask.redirect(flask.url_for('label_task', task_name=task_name))
 
 
@@ -226,15 +226,15 @@ def reload_ranker(task_name):
     if task.crawling:
         logger.info(f'not reloading ranker data because '
                     f'scraping is in progress: {task_name}')
-        flask.flash(f'Scraping in progress, not reloading data.')
+        flask.flash(f'Scraping in progress, not reloading data.', 'warning')
     if task.ranker.busy:
         logger.info(f'not reloading ranker data because '
                     f'ranker is busy (reloading or recalculating): {task_name}')
-        flask.flash(f'Ranker is busy, not reloading data.')
+        flask.flash(f'Ranker is busy, not reloading data.', 'warning')
     else:
         task.reload_ranker()
         logger.info(f'reloading ranker: {task_name}')
-        flask.flash(f're-loading data for task "{task_name}"')
+        flask.flash(f're-loading data for task "{task_name}"', 'info')
     return flask.redirect(flask.url_for('task_description', task_name=task_name))
 
 
@@ -247,7 +247,7 @@ def scrape_task(task_name):
         days_since_last = task.days_since_last_crawl()
     except FileNotFoundError as e:
         days_since_last = None
-        flask.flash(f'no crawl data found for task (is this a new task?)')
+        flask.flash(f'no crawl data found for task (is this a new task?)', 'warning')
 
     if task.crawling:
         n_jobs = task.jobs_in_latest_crawl() or 0
@@ -279,7 +279,7 @@ def scrape_start(task_name):
     task = tasks[task_name]
     task.start_crawl()
     logger.info(f'started scraping for {task_name}')
-    flask.flash(f'Started scraping for task "{task_name}"')
+    flask.flash(f'Started scraping for task "{task_name}"', 'success')
     return flask.redirect(flask.url_for('scrape_task', task_name=task_name))
 
 
