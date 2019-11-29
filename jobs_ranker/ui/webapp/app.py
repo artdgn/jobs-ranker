@@ -116,7 +116,7 @@ def label_task(task_name):
             message='Please wait a bit: calculating rankings',
             seconds=5,
             back_url=back_url,
-            back_text=f'.. or go back: {back_url}')
+            back_text=f'.. or go back:')
     else:
         url = task.get_url()
 
@@ -126,7 +126,7 @@ def label_task(task_name):
                 message=(f'No more new unlabeled jobs for task "{task_name}", '
                          f'try dedup off, or scrape new jobs'),
                 back_url=back_url,
-                back_text=f'Back: {back_url}')
+                back_text=f'Back:')
         else:
             # go label it
             return flask.redirect(flask.url_for(
@@ -147,7 +147,7 @@ def label_url(task_name, url):
             message='Please wait a bit: calculating rankings',
             seconds=5,
             back_url=back_url,
-            back_text=f'.. or go back: {back_url}')
+            back_text=f'.. or go back:')
 
     if task.ranker_outdated():
         reload_url = flask.url_for('reload_ranker', task_name=task_name)
@@ -254,14 +254,16 @@ def scrape_task(task_name):
 
     if task.crawling:
         n_jobs = task.jobs_in_latest_crawl() or 0
+        expected = task.expected_jobs_per_crawl()
         return flask.render_template(
             'waiting.html',
             message=(f'Please wait: scarping new jobs from job-site'
                      f'({n_jobs} jobs in current file)'),
+            progress_percent=int(100 * n_jobs / expected),
             seconds=30,
             back_url=back_url,
             back_text=(f'Reload or back (will not cancel scrape, '
-                       f'will reload only if finished): {back_url}'))
+                       f'will reload only if finished):'))
 
     start_url = flask.url_for('scrape_start', task_name=task_name)
 

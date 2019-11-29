@@ -1,11 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Waiting{% endblock %}
 {% block head %}
-    {{ super() }}
+{{ super() }}
 {% endblock %}
 {% block content %}
 <meta http-equiv="refresh" content="{{ seconds }}">
 <h1>{{ message }}</h1>
 <h2>(Waiting {{ seconds }} (more) seconds to auto-refresh)</h2>
-<a href="{{ back_url }}"><h3> {{back_text}}</h3> </a>
+<h3> {{back_text}}<a href="{{ back_url }}">{{ back_url }}</a></h3>
+<br>
+{% if progress_percent %}
+<div class="progress">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+         aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100"
+         style="width: {{ progress_percent }}%">
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

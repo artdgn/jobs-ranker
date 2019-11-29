@@ -10,15 +10,6 @@ td {
   padding: 5px;
   text-align: left;
 }
-.green-button {
-  border: 3px solid #41e823;
-}
-.orange-button {
-  border: 3px solid #eb881e;
-}
-.blue-button {
-  border: 3px solid #236ee8;
-}
 .job-description {
   width: 50%;
 }

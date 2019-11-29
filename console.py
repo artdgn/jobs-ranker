@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 
 from jobs_ranker.ui import text
-from jobs_ranker.scraping.crawling import CrawlProcess
+from jobs_ranker.scraping.crawling import JoraCrawlProcess
 from jobs_ranker.joblist.ranking import JobsRanker
 from jobs_ranker.tasks.configs import TasksConfigsDao
 
@@ -35,7 +35,7 @@ def main():
     task_config = task_chooser.load_or_choose_task(task_name=args.task_name)
 
     if args.scrape:
-        crawl_proc = CrawlProcess(task_config=task_config)
+        crawl_proc = JoraCrawlProcess(task_config=task_config)
         crawl_proc.start()
         crawl_proc.join()
 

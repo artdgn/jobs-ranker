@@ -5,7 +5,7 @@ from multiprocessing import Process
 
 import flask
 
-from jobs_ranker.scraping.crawling import CrawlsFilesDao, CrawlProcess
+from jobs_ranker.scraping.crawling import CrawlsFilesDao, JoraCrawlProcess
 from jobs_ranker.joblist.ranking import JobsRanker
 from jobs_ranker.tasks.configs import TasksConfigsDao
 
@@ -88,7 +88,7 @@ class TaskSession:
         self._crawler.join()
 
     def start_crawl(self):
-        self._crawler = CrawlProcess(task_config=self.get_config())
+        self._crawler = JoraCrawlProcess(task_config=self.get_config())
         self._crawl_subproc = Process(target=self._start_crawl)
         self._crawl_subproc.start()
 
@@ -106,6 +106,10 @@ class TaskSession:
             return CrawlsFilesDao.rows_in_file(self._crawler.crawl_output_path)
         else:
             return 0
+
+    def expected_jobs_per_crawl(self):
+        return (len(self.get_config().search_urls) *
+                JoraCrawlProcess.expected_jobs_per_search)
 
     def ranker_outdated(self):
         if (self._crawler and

@@ -11,7 +11,9 @@ from jobs_ranker import common
 from jobs_ranker.utils.logger import logger
 
 
-class CrawlProcess:
+class JoraCrawlProcess:
+
+    expected_jobs_per_search = 500
 
     def __init__(self, task_config: TaskConfig, http_cache=False):
         self.task_config = task_config
