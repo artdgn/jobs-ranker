@@ -107,20 +107,19 @@ class CrawlsFilesDao:
                 f'No crawls found for task "{task_config.name}", '
                 f'please run scraping.')
 
-        if task_config.past_scrapes_relevance_days:
+        if task_config.past_scrapes_relevance_date:
             filtered_crawls = cls._filter_recent(all_crawls, task_config=task_config)
             logger.info(f'got {len(filtered_crawls)} out of {len(all_crawls)} scrapes '
-                        f'due to past_scrapes_relevance_days={task_config.past_scrapes_relevance_days}')
+                        f'due to past_scrapes_relevance_date={task_config.past_scrapes_relevance_date}')
             return filtered_crawls
         else:
             return all_crawls
 
     @classmethod
     def _filter_recent(cls, crawls, task_config: TaskConfig):
-        relevance_days = task_config.past_scrapes_relevance_days
-        latest_date = cls._crawl_date(crawls[-1])
+        relevance_date = pd.to_datetime(task_config.past_scrapes_relevance_date)
         return [c for c in crawls
-                if cls._days_difference(latest_date, c) <= relevance_days]
+                if pd.to_datetime(cls._crawl_date(c)) >= relevance_date]
 
     @staticmethod
     def _crawl_date(crawl):

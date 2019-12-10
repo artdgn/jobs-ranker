@@ -292,7 +292,7 @@ def scrape_start(task_name):
 def labels_history(task_name):
     task = tasks[task_name]
     task.ranker.labeler.load()
-    table = task.ranker.labeler.df.to_html(na_rep='', render_links=True)
+    table = task.ranker.labeler.export_html_table()
     return flask.render_template('rawtext_or_html.html', html=table)
 
 

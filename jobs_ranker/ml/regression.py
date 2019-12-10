@@ -196,7 +196,7 @@ class LGBPipeline(RegPipelineBase):
                 x_train, x_valid, y_train, y_valid = train_test_split(X, y, test_size=0.3)
                 LGBMRegressor.fit(self, x_train, y_train,
                                   eval_metric='l2',
-                                  early_stopping_rounds=20,
+                                  early_stopping_rounds=200,
                                   eval_set=(x_valid, y_valid),
                                   verbose=False)
                 logger.info(f'LGBM early stopping: '

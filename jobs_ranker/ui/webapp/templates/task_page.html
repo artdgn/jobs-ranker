@@ -16,6 +16,25 @@
     <li class="nav-item">
         <a class="nav-link btn btn-secondary btn-lg mx-sm-1" href="{{ reload_url }}">Reload and recalc</a>
     </li>
+
+    <li class="nav-item">
+        <div class="btn-group">
+            <div id="headingDesc">
+                <a class="nav-link btn btn-secondary btn-lg mx-sm-1" type="button"
+                   data-toggle="collapse" data-target="#collapseDesc"
+                   aria-expanded="false" aria-controls="collapseDesc">
+                   Task definition
+                </a>
+            </div>
+            <button type="button" class="nav-link btn btn-secondary btn-lg dropdown-toggle dropdown-toggle-split"
+               id="taskDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-reference="parent">
+            </button>
+            <div class="dropdown-menu" aria-labelledby="taskDrop">
+                <a class="dropdown-item" href="{{ edit_url }}">Edit Task</a>
+            </div>
+        </div>
+    </li>
+
     <li class="nav-item">
         <div class="dropdown">
             <a class="nav-link btn btn-secondary btn-lg dropdown-toggle mx-sm-1" type="button"
@@ -28,18 +47,6 @@
             </div>
         </div>
     </li>
-    <li class="nav-item">
-        <div id="headingDesc">
-            <a class="nav-link btn btn-secondary btn-lg mx-sm-1" type="button"
-               data-toggle="collapse" data-target="#collapseDesc"
-               aria-expanded="false" aria-controls="collapseDesc">
-                Show task definition..
-            </a>
-        </div>
-    <li class="nav-item">
-        <a class="nav-link btn btn-secondary btn-lg mx-sm-1" href="{{ edit_url }}">Edit task definition</a>
-    </li>
-
 </ul>
 <div class="collapse" id="collapseDesc" aria-labelledby="headingDesc">
     <div class="card card-body">

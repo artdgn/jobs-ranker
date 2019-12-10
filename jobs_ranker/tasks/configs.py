@@ -23,8 +23,9 @@ class TaskConfig(dict):
         return self['search_urls']
 
     @property
-    def past_scrapes_relevance_days(self):
-        return int(self.get('past_scrapes_relevance_days', 0) or 0)
+    def past_scrapes_relevance_date(self):
+        old_date = '2000-01-01'
+        return str(self.get('past_scrapes_relevance_date', old_date)) or old_date
 
     @property
     def crawls_dir(self):

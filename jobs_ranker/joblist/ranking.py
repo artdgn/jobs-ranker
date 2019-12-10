@@ -328,10 +328,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         df_train = labels_df.set_index('url'). \
             join(df_jobs_all.set_index('url'), how='left')
 
-        df_train[self.target_col] = df_train['label']. \
-            replace(self.labeler.pos_label, '1.0'). \
-            replace(self.labeler.neg_label, '0.0'). \
-            astype(float)
+        df_train[self.target_col] = df_train[self.labeler.label_col]
 
         if self.skipped_as_negatives:
             df_past_skipped = df_jobs_all.loc[

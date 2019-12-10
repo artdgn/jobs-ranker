@@ -2,6 +2,7 @@ scrapy
 scikit-learn
 numpy
 pandas
+matplotlib
 Flask
 requests
 lightgbm
