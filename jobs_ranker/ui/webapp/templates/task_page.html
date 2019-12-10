@@ -4,53 +4,72 @@
 {{ super() }}
 {% endblock %}
 {% block content %}
-<h1>Task "{{task_name}}":</h1>
-<br>
-<h2>View jobs and Label: <a href="{{ label_url }}">{{ label_url }}</a></h2>
-<h2>Scrape for new jobs: <a href="{{ scrape_url }}">{{ scrape_url }}</a></h2>
 
-<h2>Back: <a href="{{ back_url }}">{{ back_url }}</a></h2>
-<br>
+<h2>
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ back_url }}">Tasks</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{task_name}}</li>
+    </ol>
+</h2>
 
-<ul class="nav nav-pills nav-fill" style="width: 50%">
+
+<ul class="nav flex-column">
+
     <li class="nav-item">
-        <a class="nav-link btn btn-secondary btn-lg mx-sm-1" href="{{ reload_url }}">Reload and recalc</a>
+        <a class="nav-link btn btn-primary btn-lg mx-sm-1 mb-2" href="{{ label_url }}">View and label jobs</a>
     </li>
 
     <li class="nav-item">
-        <div class="btn-group">
-            <div id="headingDesc">
-                <a class="nav-link btn btn-secondary btn-lg mx-sm-1" type="button"
-                   data-toggle="collapse" data-target="#collapseDesc"
-                   aria-expanded="false" aria-controls="collapseDesc">
-                   Task definition
-                </a>
-            </div>
-            <button type="button" class="nav-link btn btn-secondary btn-lg dropdown-toggle dropdown-toggle-split"
-               id="taskDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-reference="parent">
-            </button>
-            <div class="dropdown-menu" aria-labelledby="taskDrop">
-                <a class="dropdown-item" href="{{ edit_url }}">Edit Task</a>
-            </div>
-        </div>
+        <a class="nav-link btn btn-primary btn-lg mx-sm-1 mb-2" href="{{ scrape_url }}">Scrape new jobs</a>
     </li>
 
     <li class="nav-item">
-        <div class="dropdown">
-            <a class="nav-link btn btn-secondary btn-lg dropdown-toggle mx-sm-1" type="button"
-               id="infoDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Info
-            </a>
-            <div class="dropdown-menu" aria-labelledby="infoDrop">
-                <a class="dropdown-item" href="{{ url_for('server_logs') + '#bottom' }}" target="_blank">Server logs</a>
-                <a class="dropdown-item" href="{{ labels_history_url + '#bottom' }}" target="_blank">Labels history</a>
-            </div>
-        </div>
-    </li>
+        <ul class="nav nav-justified">
+
+            <li class="nav-item">
+                <a class="nav-link btn btn-secondary mx-sm-1" href="{{ reload_url }}">Reload and recalc</a>
+            </li>
+
+            <li class="nav-item">
+                <div class="btn-group">
+                    <div id="headingDesc">
+                        <a class="nav-link btn btn-secondary mx-sm-1" type="button"
+                           data-toggle="collapse" data-target="#collapseDesc"
+                           aria-expanded="false" aria-controls="collapseDesc">
+                            Task definition
+                        </a>
+                    </div>
+                    <button type="button" class="nav-link btn btn-secondary dropdown-toggle dropdown-toggle-split"
+                            id="taskDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                            data-reference="parent">
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="taskDrop">
+                        <a class="dropdown-item" href="{{ edit_url }}">Edit Task</a>
+                    </div>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <div class="dropdown">
+                    <a class="nav-link btn btn-secondary dropdown-toggle mx-sm-1" type="button"
+                       id="infoDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Info
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="infoDrop">
+                        <a class="dropdown-item" href="{{ url_for('server_logs') + '#bottom' }}" target="_blank">Server
+                            logs</a>
+                        <a class="dropdown-item" href="{{ labels_history_url + '#bottom' }}" target="_blank">Labels
+                            history</a>
+                    </div>
+                </div>
+            </li>
+        </ul>
 </ul>
+
 <div class="collapse" id="collapseDesc" aria-labelledby="headingDesc">
     <div class="card card-body">
         <pre id="json"><span class="inner-pre">{{ config_data }}</span></pre>
     </div>
 </div>
+
 {% endblock %}

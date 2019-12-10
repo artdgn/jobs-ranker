@@ -1,15 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Tasks{% endblock %}
 {% block head %}
-    {{ super() }}
+{{ super() }}
 {% endblock %}
 {% block content %}
-    <h1>Available tasks:</h1>
-    <ul id="tasks">
+<h2>
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item active" aria-current="page"> Tasks</li>
+    </ol>
+</h2>
+<ul id="tasks" class="nav nav-pills flex-column text-sm-center">
     {% for item in task_urls %}
-        <li><h2><a href="{{ item['url'] }}">{{ item['name'] }}</a></h2></li>
+    <li class="nav-item">
+        <h2>
+            <a class="nav-link active" href="{{ item['url'] }}">{{ item['name'] }}</a>
+        </h2>
+    </li>
     {% endfor %}
-    </ul>
-    <br>
-    <h3>Create new task: <a href="{{ new_task }}">{{ new_task }}</a></h3>
+    <li class="nav-item">
+        <h2>
+            <a class="nav-link btn btn-secondary btn-lg active" href="{{ new_task }}"> .. new task </a>
+        </h2>
+    </li>
+</ul>
+
+
 {% endblock %}

@@ -1,9 +1,8 @@
 - eng:
     - remove unused options and params
     - webapp:        
-        - nicer layout
+        - nicer layout for all pages
         - get rid of auto-reload + udpate progressbar
-	    - days relevance to date relevance
         - optional parameters (dedup, cache, ..) - remove or add to task-config
     - display closest labeled dup for each + simil score + label
     - refactor dups

@@ -4,16 +4,19 @@
     {{ super() }}
 {% endblock %}
 {% block content %}
-<h3>
-    <a href="{{ back_url }}">Back: {{ back_url }}</a>
-</h3>
+<h2>
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ back_url }}">Tasks</a></li>
+        <li class="breadcrumb-item active" aria-current="page"> Edit Task </li>
+    </ol>
+</h2>
 <form method="post" id="form">
+    <div class="btn-group  mb-3">
+        <input type=submit name=save value=Save class="btn btn-outline-success btn-lg mp-2 mx-sm-1">
+        <input type=submit name=reset value=Reset class="btn btn-outline-warning btn-lg mp-2 mx-sm-1">
+    </div>
     <h3>Task JSON:</h3>
-    <p>
-        <input type=submit name=save value=Save class="btn btn-outline-success">
-        <input type=submit name=reset value=Reset class="btn btn-outline-warning">
-    </p>
-    <textarea id=text cols=100 rows=40 form="form"
+    <textarea id=text cols=100 rows=40 form="form" class="form-control"
               name="text">{{ text_data }}</textarea>
 </form>
 {% endblock %}

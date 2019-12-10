@@ -163,17 +163,22 @@ def label_url(task_name, url):
     if flask.request.method == 'GET':
         return flask.render_template(
             'job_page.html',
+            task_name=task_name,
             job_url=url,
             job_title=url_attributes.get('title'),
             job_description=raw_description,
             url_data=url_att_html,
-            skip_url=flask.url_for('skip_url', task_name=task_name, url=url),
-            recalc_url=flask.url_for('recalc', task_name=task_name),
             back_url=back_url
         )
 
     else:
         form = flask.request.form
+        if 'skip' in form:
+            return flask.redirect(flask.url_for('skip_url', task_name=task_name, url=url))
+
+        if 'recalc' in form:
+            return flask.redirect(flask.url_for('recalc', task_name=task_name))
+
         if 'numeric' in form:
             resp = form['label']
         elif 'no' in form:
@@ -181,7 +186,7 @@ def label_url(task_name, url):
         elif 'yes' in form:
             resp = task.ranker.labeler.pos_label
         elif 'somewhat' in form:
-            resp = '0.5'
+            resp = '0.3'
         else:
             resp = form['label']
 

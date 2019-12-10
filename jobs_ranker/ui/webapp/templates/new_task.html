@@ -4,12 +4,18 @@
     {{ super() }}
 {% endblock %}
 {% block content %}
-<h3>
-    <a href="{{ back_url }}">Back: {{ back_url }}</a>
-</h3>
+<h2>
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ back_url }}">Tasks</a></li>
+        <li class="breadcrumb-item active" aria-current="page"> New Task </li>
+    </ol>
+</h2>
+
 <form method="post" id="form">
-    Select a name for the new task (no spaces):
-    <p>Name: <input type=text name=name autofocus autocomplete="off"></p>
-    <input type=submit name=next value="Save and edit">
+    <h3>Select a name for the new task (no spaces):</h3>
+    <div class="form-group">
+    <input type=text class="form-control-lg" name=name autofocus autocomplete="off" placeholder="..no spaces">
+        </div>
+    <input type=submit class="btn btn-primary btn-lg" name=next value="Create and go to edit">
 </form>
 {% endblock %}

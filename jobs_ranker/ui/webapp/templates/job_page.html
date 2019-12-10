@@ -4,12 +4,14 @@
 {{ super() }}
 {% endblock %}
 {% block content %}
-<h3>Controls:
-    <a href="{{ skip_url }}">Skip</a> |
-    <a href="{{ recalc_url }}">Recalculate</a> |
-    <a href="{{ back_url }}">Back to task page..</a>
-</h3>
-<br>
+<h2>
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('tasks_list') }}">Tasks</a></li>
+        <li class="breadcrumb-item"><a href="{{ back_url }}"> {{task_name}} </a></li>
+        <li class="breadcrumb-item active" aria-current="page"> Label </li>
+    </ol>
+</h2>
+
 <h1>Label the Relevance:</h1>
 <form method="post" class="form-inline">
     <div class="form-group mp-2 mx-sm-1">
@@ -28,6 +30,12 @@
     <div class="form-group mp-2 mx-sm-1">
         <input type=submit name=numeric id="labelButton" value=Label class="btn btn-outline-info btn-primary btn-lg">
     </div>
+    <div class="form-group mp-2 mx-sm-1">
+        <input type=submit name=skip value="Skip" class="btn btn-link">
+    </div>
+    <div class="form-group mp-2 mx-sm-1">
+        <input type=submit name=recalc value="Recalc" class="btn btn-link">
+    </div>
 </form>
 <script type=text/javascript src="{{ url_for('static', filename='utils.js') }}"></script>
 <script>
@@ -40,7 +48,7 @@
 <br>
 <h1>Title: <b>{{ job_title }} </b></h1>
 <br>
-<style>table, th, td {border: 1px solid black; text-align: left;} table {width: 50%;}</style>
+<style>table, th, td {border: 1px solid black; text-align: left;} table {max-width: 800px;}</style>
 <h3>{{ url_data|safe }}</h3>
 <br>
 <h2>Description: </h2>
