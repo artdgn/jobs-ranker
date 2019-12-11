@@ -3,12 +3,12 @@
 {% block head %}
 {{ super() }}
 {% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page"> Tasks</li>
+{% endblock %}
+
 {% block content %}
-<h2>
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item active" aria-current="page"> Tasks</li>
-    </ol>
-</h2>
 <ul id="tasks" class="nav nav-pills flex-column text-sm-center">
     {% for task_name in task_names %}
     <li class="nav-item">

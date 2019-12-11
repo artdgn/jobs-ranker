@@ -3,49 +3,44 @@
 {% block head %}
 {{ super() }}
 {% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('tasks_list') }}">Tasks</a></li>
+<li class="breadcrumb-item"><a href="{{ back_url }}"> {{task_name}} </a></li>
+<li class="breadcrumb-item active" aria-current="page"> Label</li>
+{% endblock %}
 {% block content %}
-<h2>
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('tasks_list') }}">Tasks</a></li>
-        <li class="breadcrumb-item"><a href="{{ back_url }}"> {{task_name}} </a></li>
-        <li class="breadcrumb-item active" aria-current="page"> Label </li>
-    </ol>
-</h2>
+<div class="sticky-top bg-white py-2 my-2">
+    <h4>Job Page: <a id="job_link" class="py-3 my-3"
+                     href="{{ job_url }}" target="_blank">{{ job_url }}</a></h4>
 
-<h1>Label the Relevance:</h1>
-<form method="post" class="form-inline">
-    <div class="form-group mp-2 mx-sm-1">
-        <input type=submit name=no value="Irrelevant" class="btn btn-outline-danger btn-primary btn-lg">
-    </div>
-    <div class="form-group mp-2 mx-sm-1">
-        <input type=submit name=somewhat value="So-so.." class="btn btn-outline-info btn-primary btn-lg">
-    </div>
-    <div class="form-group mp-2 mx-sm-1">
-        <input type=submit name=yes value="Relevant" class="btn btn-outline-success btn-primary btn-lg">
-    </div>
-    <div class="form-group mp-2 mx-sm-1">
-        <input type=text class="form-control-lg" name=label
-               id="textField" autofocus autocomplete="off" placeholder="..or number between 0 and 1">
-    </div>
-    <div class="form-group mp-2 mx-sm-1">
-        <input type=submit name=numeric id="labelButton" value=Label class="btn btn-outline-info btn-primary btn-lg">
-    </div>
-    <div class="form-group mp-2 mx-sm-1">
-        <input type=submit name=skip value="Skip" class="btn btn-link">
-    </div>
-    <div class="form-group mp-2 mx-sm-1">
-        <input type=submit name=recalc value="Recalc" class="btn btn-link">
-    </div>
-</form>
-<script type=text/javascript src="{{ url_for('static', filename='utils.js') }}"></script>
-<script>
-    document.getElementById('textField')
-        .addEventListener('keypress', clickButtonOnEnter('labelButton'));
+    <form method="post" class="form-inline">
+        <h4 class="form-group my-2 mx-sm-1">Relevance: </h4>
+        <div class="form-group my-2 mx-sm-1">
+            <input type=submit name=no value="Irrelevant" class="btn btn-outline-danger btn-primary btn-lg">
+        </div>
+        <div class="form-group my-2 mx-sm-1">
+            <input type=submit name=somewhat value="So-so.." class="btn btn-outline-info btn-primary btn-lg">
+        </div>
+        <div class="form-group my-2 mx-sm-1">
+            <input type=submit name=yes value="Relevant" class="btn btn-outline-success btn-primary btn-lg">
+        </div>
+        <div class="form-group my-2 mx-sm-1">
+            <input type=text class="form-control-lg" name=label
+                   id="textField" autofocus autocomplete="off" placeholder="..or number between 0 and 1">
+        </div>
+        <div class="form-group my-2 mx-sm-1">
+            <input type=submit name=numeric id="labelButton" value=Label
+                   class="btn btn-outline-info btn-primary btn-lg">
+        </div>
+        <div class="form-group my-2 mx-sm-1">
+            <input type=submit name=skip value="Skip" class="btn btn-link">
+        </div>
+        <div class="form-group my-2 mx-sm-1">
+            <input type=submit name=recalc value="Recalc" class="btn btn-link">
+        </div>
+    </form>
+</div>
 
-</script>
-<br>
-<h3>Page: <a id="job_link" href="{{ job_url }}" target="_blank">{{ job_url }}</a></h3>
-<br>
 <h1>Title: <b>{{ job_title }} </b></h1>
 <br>
 <style>table, th, td {border: 1px solid black; text-align: left;} table {max-width: 800px;}</style>
@@ -56,4 +51,12 @@
 <div class="job-description">
     {{ job_description|safe }}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script type=text/javascript src="{{ url_for('static', filename='utils.js') }}"></script>
+<script>
+document.getElementById('textField')
+    .addEventListener('keypress', clickButtonOnEnter('labelButton'));
+</script>
 {% endblock %}

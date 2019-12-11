@@ -91,6 +91,15 @@ def new_task():
             return flask.redirect(flask.url_for('new_task'))
 
 
+def _ranker_busy_page(task_name):
+    return flask.render_template(
+        'waiting.html',
+        message='Please wait a bit: calculating rankings',
+        seconds=5,
+        task_name=flask.url_for('task_description', task_name=task_name),
+        back_text=f'.. or go back:')
+
+
 @app.route('/<task_name>/label/')
 def labeling(task_name):
     task = tasks[task_name]
@@ -98,43 +107,31 @@ def labeling(task_name):
     back_url = flask.url_for('task_description', task_name=task_name)
 
     if task.ranker.busy:
+        return _ranker_busy_page(task_name)
+
+    url = task.get_url()
+
+    if url is None:
         return flask.render_template(
-            'waiting.html',
-            message='Please wait a bit: calculating rankings',
-            seconds=5,
+            'error.html',
+            message=(f'No more new unlabeled jobs for task "{task_name}", '
+                     f'try dedup off, or scraping new jobs'),
             back_url=back_url,
-            back_text=f'.. or go back:')
+            back_text=f'Back:')
     else:
-        url = task.get_url()
-
-        if url is None:
-            return flask.render_template(
-                'error.html',
-                message=(f'No more new unlabeled jobs for task "{task_name}", '
-                         f'try dedup off, or scraping new jobs'),
-                back_url=back_url,
-                back_text=f'Back:')
-        else:
-            # go label it
-            return flask.redirect(flask.url_for(
-                'label_url',
-                task_name=task_name,
-                url=url))
+        # go label it
+        return flask.redirect(
+            flask.url_for('label_url_get', task_name=task_name, url=url))
 
 
-@app.route('/<task_name>/label/<path:url>/', methods=['GET', 'POST'])
-def label_url(task_name, url):
+@app.route('/<task_name>/label/<path:url>/', methods=['GET'])
+def label_url_get(task_name, url):
     task = tasks[task_name]
     task.load_ranker()
     back_url = flask.url_for('task_description', task_name=task_name)
 
     if task.ranker.busy:
-        return flask.render_template(
-            'waiting.html',
-            message='Please wait a bit: calculating rankings',
-            seconds=5,
-            back_url=back_url,
-            back_text=f'.. or go back:')
+        return _ranker_busy_page(task_name)
 
     if task.ranker_outdated():
         reload_url = flask.url_for('reload_ranker', task_name=task_name)
@@ -147,54 +144,53 @@ def label_url(task_name, url):
     url_att_html = (url_attributes.drop(['url', 'title']).
                     to_frame().to_html(header=False, justify='right'))
 
-    if flask.request.method == 'GET':
-        return flask.render_template(
-            'job_page.html',
-            task_name=task_name,
-            job_url=url,
-            job_title=url_attributes.get('title'),
-            job_description=raw_description,
-            url_data=url_att_html,
-            back_url=back_url
-        )
+    return flask.render_template(
+        'job_page.html',
+        task_name=task_name,
+        job_url=url,
+        job_title=url_attributes.get('title'),
+        job_description=raw_description,
+        url_data=url_att_html,
+        back_url=back_url
+    )
 
+
+@app.route('/<task_name>/label/<path:url>/', methods=['POST'])
+def label_url_post(task_name, url):
+    task = tasks[task_name]
+    task.load_ranker()
+
+    form = flask.request.form
+    if 'skip' in form:
+        return flask.redirect(flask.url_for('skip_url', task_name=task_name, url=url))
+
+    if 'recalc' in form:
+        return flask.redirect(flask.url_for('recalc', task_name=task_name))
+
+    if 'numeric' in form:
+        resp = form['label']
+    elif 'no' in form:
+        resp = task.ranker.labeler.neg_label
+    elif 'yes' in form:
+        resp = task.ranker.labeler.pos_label
+    elif 'somewhat' in form:
+        resp = '0.3'
     else:
-        form = flask.request.form
-        if 'skip' in form:
-            return flask.redirect(flask.url_for('skip_url', task_name=task_name, url=url))
+        resp = form['label']
 
-        if 'recalc' in form:
-            return flask.redirect(flask.url_for('recalc', task_name=task_name))
+    if not task.ranker.labeler.is_valid_label(str(resp)):
+        # bad input, render same page again
+        flask.flash(f'not a valid input: "{resp}", please relabel (or skip)', 'danger')
+        return flask.redirect(flask.url_for('label_url_get', task_name=task_name, url=url))
+    else:
+        task.add_label(url, resp)
+        flask.flash(flask.Markup(
+            f"""labeled "{resp}" for <a href="{url}" 
+            class="alert-link" target="_blank"=>{url}</a>"""),
+            'success')
 
-        if 'numeric' in form:
-            resp = form['label']
-        elif 'no' in form:
-            resp = task.ranker.labeler.neg_label
-        elif 'yes' in form:
-            resp = task.ranker.labeler.pos_label
-        elif 'somewhat' in form:
-            resp = '0.3'
-        else:
-            resp = form['label']
-
-        if not task.ranker.labeler.is_valid_label(str(resp)):
-            # bad input, render same page again
-            flask.flash(f'not a valid input: "{resp}", please relabel (or skip)', 'danger')
-            return flask.redirect(flask.url_for(
-                'label_url',
-                task_name=task_name,
-                url=url))
-        else:
-            task.add_label(url, resp)
-            flask.flash(flask.Markup(
-                f"""labeled "{resp}" for <a href="{url}" 
-                class="alert-link" target="_blank"=>{url}</a>"""),
-                'success')
-
-        # label next
-        return flask.redirect(flask.url_for(
-            'labeling',
-            task_name=task_name))
+    # label next
+    return flask.redirect(flask.url_for('labeling', task_name=task_name))
 
 
 @app.route('/<task_name>/label/skip/<path:url>/')

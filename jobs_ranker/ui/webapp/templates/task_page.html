@@ -3,16 +3,13 @@
 {% block head %}
 {{ super() }}
 {% endblock %}
-{% block content %}
 
-<h2>
-    <ol class="breadcrumb">
+{% block breadcrumb %}
         <li class="breadcrumb-item"><a href="{{ url_for('tasks_list') }}">Tasks</a></li>
         <li class="breadcrumb-item active" aria-current="page">{{task_name}}</li>
-    </ol>
-</h2>
+{% endblock %}
 
-
+{% block content %}
 <ul class="nav flex-column">
 
     <li class="nav-item">
@@ -38,9 +35,7 @@
                     <div id="headingDesc">
                         <a class="nav-link btn btn-secondary mx-sm-1" type="button"
                            data-toggle="collapse" data-target="#collapseDesc"
-                           aria-expanded="false" aria-controls="collapseDesc">
-                            Task definition
-                        </a>
+                           aria-expanded="false" aria-controls="collapseDesc">Task definition</a>
                     </div>
                     <button type="button" class="nav-link btn btn-secondary dropdown-toggle dropdown-toggle-split"
                             id="taskDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
@@ -56,16 +51,14 @@
             <li class="nav-item">
                 <div class="dropdown">
                     <a class="nav-link btn btn-secondary dropdown-toggle mx-sm-1" type="button"
-                       id="infoDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Info
-                    </a>
+                       id="infoDrop" data-toggle="dropdown" aria-haspopup="true"
+                       aria-expanded="false">Info</a>
                     <div class="dropdown-menu" aria-labelledby="infoDrop">
-                        <a class="dropdown-item" href="{{ url_for('server_logs') + '#bottom' }}" target="_blank">Server
-                            logs</a>
+                        <a class="dropdown-item" href="{{ url_for('server_logs') + '#bottom' }}"
+                           target="_blank">Server logs</a>
                         <a class="dropdown-item"
                            href="{{ url_for('labels_history', task_name=task_name) + '#bottom' }}"
-                           target="_blank">Labels
-                            history</a>
+                           target="_blank">Labels history</a>
                     </div>
                 </div>
             </li>
@@ -74,7 +67,7 @@
 
 <div class="collapse" id="collapseDesc" aria-labelledby="headingDesc">
     <div class="card card-body">
-        <pre id="json"><span class="inner-pre">{{ config_data }}</span></pre>
+        <pre id="json"><span class="inner-pre font-weight-bold">{{ config_data }}</span></pre>
     </div>
 </div>
 
