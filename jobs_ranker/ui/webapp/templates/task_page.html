@@ -7,7 +7,7 @@
 
 <h2>
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ back_url }}">Tasks</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('tasks_list') }}">Tasks</a></li>
         <li class="breadcrumb-item active" aria-current="page">{{task_name}}</li>
     </ol>
 </h2>
@@ -16,18 +16,21 @@
 <ul class="nav flex-column">
 
     <li class="nav-item">
-        <a class="nav-link btn btn-primary btn-lg mx-sm-1 mb-2" href="{{ label_url }}">View and label jobs</a>
+        <a class="nav-link btn btn-primary btn-lg mx-sm-1 mb-2"
+           href="{{ url_for('labeling', task_name=task_name) }}">View and label jobs</a>
     </li>
 
     <li class="nav-item">
-        <a class="nav-link btn btn-primary btn-lg mx-sm-1 mb-2" href="{{ scrape_url }}">Scrape new jobs</a>
+        <a class="nav-link btn btn-primary btn-lg mx-sm-1 mb-2"
+           href="{{ url_for('scraping', task_name=task_name) }}">Scrape new jobs</a>
     </li>
 
     <li class="nav-item">
         <ul class="nav nav-justified">
 
             <li class="nav-item">
-                <a class="nav-link btn btn-secondary mx-sm-1" href="{{ reload_url }}">Reload and recalc</a>
+                <a class="nav-link btn btn-secondary mx-sm-1"
+                   href="{{ url_for('reload_ranker', task_name=task_name) }}">Reload and recalc</a>
             </li>
 
             <li class="nav-item">
@@ -44,7 +47,8 @@
                             data-reference="parent">
                     </button>
                     <div class="dropdown-menu" aria-labelledby="taskDrop">
-                        <a class="dropdown-item" href="{{ edit_url }}">Edit Task</a>
+                        <a class="dropdown-item"
+                           href="{{ url_for('edit_task', task_name=task_name) }}">Edit Task</a>
                     </div>
                 </div>
             </li>
@@ -58,7 +62,9 @@
                     <div class="dropdown-menu" aria-labelledby="infoDrop">
                         <a class="dropdown-item" href="{{ url_for('server_logs') + '#bottom' }}" target="_blank">Server
                             logs</a>
-                        <a class="dropdown-item" href="{{ labels_history_url + '#bottom' }}" target="_blank">Labels
+                        <a class="dropdown-item"
+                           href="{{ url_for('labels_history', task_name=task_name) + '#bottom' }}"
+                           target="_blank">Labels
                             history</a>
                     </div>
                 </div>

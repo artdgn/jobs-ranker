@@ -6,7 +6,10 @@
 {% block content %}
 <h2>
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ back_url }}">Tasks</a></li>
+        <li class="breadcrumb-item">
+            <a href="{{ url_for('tasks_list') }}">Tasks</a></li>
+        <li class="breadcrumb-item">
+            <a href="{{ url_for('task_description', task_name=task_name) }}">{{ task_name }} </a></li>
         <li class="breadcrumb-item active" aria-current="page"> Edit Task </li>
     </ol>
 </h2>

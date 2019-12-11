@@ -1,7 +1,8 @@
 - eng:
     - remove unused options and params
-    - webapp:        
-        - nicer layout for all pages
+    - refactor routing code (esp. label page)
+    - webapp: 
+        - nicer layout for all pages (waiting, confirm, error)
         - get rid of auto-reload + udpate progressbar
         - optional parameters (dedup, cache, ..) - remove or add to task-config
     - display closest labeled dup for each + simil score + label

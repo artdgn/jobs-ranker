@@ -10,16 +10,19 @@
     </ol>
 </h2>
 <ul id="tasks" class="nav nav-pills flex-column text-sm-center">
-    {% for item in task_urls %}
+    {% for task_name in task_names %}
     <li class="nav-item">
         <h2>
-            <a class="nav-link active" href="{{ item['url'] }}">{{ item['name'] }}</a>
+            <a class="nav-link active"
+               href="{{ url_for('task_description', task_name=task_name) }}">
+                {{ task_name }}</a>
         </h2>
     </li>
     {% endfor %}
     <li class="nav-item">
         <h2>
-            <a class="nav-link btn btn-secondary btn-lg active" href="{{ new_task }}"> .. new task </a>
+            <a class="nav-link btn btn-secondary btn-lg active"
+               href="{{ url_for('new_task') }}"> .. new task </a>
         </h2>
     </li>
 </ul>

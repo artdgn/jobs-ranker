@@ -11,19 +11,16 @@ tasks = TasksSessions()
 
 
 @app.route('/')
-def instructions():
+def home():
     flask.flash(f'redirected to tasks-list', 'info')
     return flask.redirect(flask.url_for('tasks_list'))
 
 
+@app.route('/')
 @app.route('/tasks/')
 def tasks_list():
-    task_urls = [{'name': t,
-                  'url': flask.url_for('task_description', task_name=t)}
-                 for t in TasksConfigsDao.all_names()]
     return flask.render_template('tasks_list.html',
-                                 task_urls=task_urls,
-                                 new_task=flask.url_for('new_task'))
+                                 task_names=TasksConfigsDao.all_names())
 
 
 @app.errorhandler(404)
@@ -31,7 +28,7 @@ def not_found(message):
     return flask.render_template(
         'error.html',
         message=message,
-        back_url=flask.url_for('instructions'),
+        back_url=flask.url_for('home'),
         back_text='Go back to start..'), 404
 
 
@@ -39,22 +36,14 @@ def not_found(message):
 def task_description(task_name):
     task = tasks[task_name]
 
-    return flask.render_template(
-        'task_page.html',
-        task_name=task_name,
-        back_url=flask.url_for('tasks_list'),
-        scrape_url=flask.url_for('scrape_task', task_name=task_name),
-        label_url=flask.url_for('label_task', task_name=task_name),
-        reload_url=flask.url_for('reload_ranker', task_name=task_name),
-        edit_url=flask.url_for('edit_task', task_name=task_name),
-        labels_history_url=flask.url_for('labels_history', task_name=task_name),
-        config_data=str(task.get_config()))
+    return flask.render_template('task_page.html',
+                                 task_name=task_name,
+                                 config_data=str(task.get_config()))
 
 
 @app.route('/<task_name>/edit', methods=['GET', 'POST'])
 def edit_task(task_name):
     task = tasks[task_name]
-    back_url = flask.url_for('task_description', task_name=task_name)
     if flask.request.method == 'GET':
 
         if task.recent_edit_attempt:
@@ -64,11 +53,9 @@ def edit_task(task_name):
         else:
             text_data = str(task.get_config())
 
-        return flask.render_template(
-            'edit_task.html',
-            back_url=back_url,
-            text_data=text_data
-        )
+        return flask.render_template('edit_task.html',
+                                     task_name=task_name,
+                                     text_data=text_data)
     else:  # post
         form = flask.request.form
 
@@ -80,7 +67,7 @@ def edit_task(task_name):
         try:
             task.update_config(form.get('text'))
             flask.flash(f'Task edit succesful!', 'success')
-            return flask.redirect(back_url)
+            return flask.redirect(flask.url_for('task_description', task_name=task_name))
 
         except ValueError as e:
             message = str(e)
@@ -105,7 +92,7 @@ def new_task():
 
 
 @app.route('/<task_name>/label/')
-def label_task(task_name):
+def labeling(task_name):
     task = tasks[task_name]
     task.load_ranker()
     back_url = flask.url_for('task_description', task_name=task_name)
@@ -124,7 +111,7 @@ def label_task(task_name):
             return flask.render_template(
                 'error.html',
                 message=(f'No more new unlabeled jobs for task "{task_name}", '
-                         f'try dedup off, or scrape new jobs'),
+                         f'try dedup off, or scraping new jobs'),
                 back_url=back_url,
                 back_text=f'Back:')
         else:
@@ -206,7 +193,7 @@ def label_url(task_name, url):
 
         # label next
         return flask.redirect(flask.url_for(
-            'label_task',
+            'labeling',
             task_name=task_name))
 
 
@@ -216,7 +203,7 @@ def skip_url(task_name, url):
     task.skip(url)
     logger.info(f'skip: {url} for "{task_name}"')
     flask.flash(f'skipped url {url} for "{task_name}"', 'warning')
-    return flask.redirect(flask.url_for('label_task', task_name=task_name))
+    return flask.redirect(flask.url_for('labeling', task_name=task_name))
 
 
 @app.route('/<task_name>/label/recalc/')
@@ -225,7 +212,7 @@ def recalc(task_name):
     task.recalc()
     logger.info(f'recalculating: {task_name}')
     flask.flash(f're-calculating rankings for task "{task_name}"', 'info')
-    return flask.redirect(flask.url_for('label_task', task_name=task_name))
+    return flask.redirect(flask.url_for('labeling', task_name=task_name))
 
 
 @app.route('/<task_name>/reload/')
@@ -247,7 +234,7 @@ def reload_ranker(task_name):
 
 
 @app.route('/<task_name>/scrape/')
-def scrape_task(task_name):
+def scraping(task_name):
     task = tasks[task_name]
     back_url = flask.url_for('reload_ranker', task_name=task_name)
 
@@ -267,17 +254,15 @@ def scrape_task(task_name):
             progress_percent=int(100 * n_jobs / expected),
             seconds=30,
             back_url=back_url,
-            back_text=(f'Reload or back (will not cancel scrape, '
+            back_text=(f'Reload or back (will not cancel scraping, '
                        f'will reload only if finished):'))
-
-    start_url = flask.url_for('scrape_start', task_name=task_name)
 
     return flask.render_template(
         'confirm.html',
         message=(f'Are you sure you want to start scraping? ' +
                  (f'latest data is from {days_since_last} day ago'
                   if days_since_last is not None else '')),
-        option_1_url=start_url,
+        option_1_url=flask.url_for('scrape_start', task_name=task_name),
         option_1_text=f'Start:',
         option_2_url=back_url,
         option_2_text=f'Back and reload data:',
@@ -290,7 +275,7 @@ def scrape_start(task_name):
     task.start_crawl()
     logger.info(f'started scraping for {task_name}')
     flask.flash(f'Started scraping for task "{task_name}"', 'success')
-    return flask.redirect(flask.url_for('scrape_task', task_name=task_name))
+    return flask.redirect(flask.url_for('scraping', task_name=task_name))
 
 
 @app.route('/<task_name>/labels_history')
