@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Waiting{% endblock %}
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <a href="{{ url_for('tasks_list') }}">Tasks</a></li>
+<li class="breadcrumb-item">
+    <a href="{{ url_for('task_description', task_name=task_name) }}">{{task_name}}</a></li>
+<li class="breadcrumb-item active" aria-current="page"> scraping</li>
+{% endblock %}
+
+{% block content %}
+
+{% if n_scraped is defined %}
+
+    <meta http-equiv="refresh" content="{{ seconds }}">
+
+    <h2>Please wait: scarping new jobs from job-site ({{ n_scraped }} jobs in current file)</h2>
+    <h4>Note: Scraping cannot be canceled and reload will be possible when finished.</h4>
+
+    <div class="progress">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+             aria-valuenow="{{ 100 * n_scraped / expected | int }}" aria-valuemin="0" aria-valuemax="100"
+             style="width: {{ 100 * n_scraped / expected | int }}%">
+        </div>
+    </div>
+
+{% else %}
+
+    <h2 class="m-3">Are you sure you want to start scraping? </h2>
+    {% if days_since_last is not none %}
+    <h4 class="m-3">Latest data is from {{ days_since_last }} day ago.</h4>
+    {% endif %}
+    <a class="nav-link btn btn-primary btn-lg"
+       href="{{ url_for('scrape_start', task_name=task_name) }}">Start scrape</a>
+
+{% endif %}
+
+{% endblock %}

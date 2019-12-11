@@ -10,6 +10,6 @@ td {
   padding: 5px;
   text-align: left;
 }
-.job-description, .breadcrumb, .nav, .form-control {
-  max-width: 800px;
+.job-description, .breadcrumb, .nav, .nav-link, .form-control, .alert{
+  max-width: 1000px;
 }

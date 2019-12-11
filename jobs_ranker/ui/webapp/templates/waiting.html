@@ -2,20 +2,17 @@
 {% block title %}Waiting{% endblock %}
 {% block head %}
 {{ super() }}
-{% endblock %}
-{% block content %}
 <meta http-equiv="refresh" content="{{ seconds }}">
-<h1>{{ message }}</h1>
-<h2>(Waiting {{ seconds }} (more) seconds to auto-refresh)</h2>
-<h3> {{back_text}}<a href="{{ back_url }}">{{ back_url }}</a></h3>
-<br>
-{% if progress_percent %}
-<div class="progress">
-    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-         aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100"
-         style="width: {{ progress_percent }}%">
-    </div>
-</div>
-{% endif %}
+{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <a href="{{ url_for('tasks_list') }}">Tasks</a></li>
+<li class="breadcrumb-item">
+    <a href="{{ url_for('task_description', task_name=task_name) }}">{{task_name}}</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+{% endblock %}
+
+{% block content %}
+<h2 class="alert alert-warning">{{ message }}</h2>
 {% endblock %}

@@ -92,19 +92,20 @@ def new_task():
 
 
 def _ranker_busy_page(task_name):
+    refresh_delay = 5
+    flask.flash(f'auto-refreshing every {refresh_delay} seconds', 'info')
     return flask.render_template(
         'waiting.html',
-        message='Please wait a bit: calculating rankings',
-        seconds=5,
-        task_name=flask.url_for('task_description', task_name=task_name),
-        back_text=f'.. or go back:')
+        title='labeling',
+        message='Please wait: calculating ranking',
+        seconds=refresh_delay,
+        task_name=task_name)
 
 
 @app.route('/<task_name>/label/')
 def labeling(task_name):
     task = tasks[task_name]
     task.load_ranker()
-    back_url = flask.url_for('task_description', task_name=task_name)
 
     if task.ranker.busy:
         return _ranker_busy_page(task_name)
@@ -115,8 +116,8 @@ def labeling(task_name):
         return flask.render_template(
             'error.html',
             message=(f'No more new unlabeled jobs for task "{task_name}", '
-                     f'try dedup off, or scraping new jobs'),
-            back_url=back_url,
+                     f'try with dedup off, or scraping new jobs'),
+            back_url=flask.url_for('task_description', task_name=task_name),
             back_text=f'Back:')
     else:
         # go label it
@@ -128,7 +129,6 @@ def labeling(task_name):
 def label_url_get(task_name, url):
     task = tasks[task_name]
     task.load_ranker()
-    back_url = flask.url_for('task_description', task_name=task_name)
 
     if task.ranker.busy:
         return _ranker_busy_page(task_name)
@@ -150,8 +150,7 @@ def label_url_get(task_name, url):
         job_url=url,
         job_title=url_attributes.get('title'),
         job_description=raw_description,
-        url_data=url_att_html,
-        back_url=back_url
+        url_data=url_att_html
     )
 
 
@@ -232,7 +231,6 @@ def reload_ranker(task_name):
 @app.route('/<task_name>/scrape/')
 def scraping(task_name):
     task = tasks[task_name]
-    back_url = flask.url_for('reload_ranker', task_name=task_name)
 
     try:
         days_since_last = task.days_since_last_crawl()
@@ -243,26 +241,17 @@ def scraping(task_name):
     if task.crawling:
         n_jobs = task.jobs_in_latest_crawl() or 0
         expected = task.expected_jobs_per_crawl()
-        return flask.render_template(
-            'waiting.html',
-            message=(f'Please wait: scarping new jobs from job-site'
-                     f'({n_jobs} jobs in current file)'),
-            progress_percent=int(100 * n_jobs / expected),
-            seconds=30,
-            back_url=back_url,
-            back_text=(f'Reload or back (will not cancel scraping, '
-                       f'will reload only if finished):'))
+        refresh_delay = 30
+        flask.flash(f'auto-refreshing every {refresh_delay} seconds', 'info')
+        return flask.render_template('scraping_page.html',
+                                     task_name=task_name,
+                                     n_scraped=n_jobs,
+                                     expected=expected,
+                                     seconds=refresh_delay)
 
-    return flask.render_template(
-        'confirm.html',
-        message=(f'Are you sure you want to start scraping? ' +
-                 (f'latest data is from {days_since_last} day ago'
-                  if days_since_last is not None else '')),
-        option_1_url=flask.url_for('scrape_start', task_name=task_name),
-        option_1_text=f'Start:',
-        option_2_url=back_url,
-        option_2_text=f'Back and reload data:',
-    )
+    return flask.render_template('scraping_page.html',
+                                 task_name=task_name,
+                                 days_since_last=days_since_last)
 
 
 @app.route('/<task_name>/scrape/start')
