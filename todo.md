@@ -1,4 +1,5 @@
 - eng:
+    - add jokes: popups for labeling, waiting gifs
     - remove unused options and params
     - webapp: 
         - optional parameters (dedup, cache, ..) - remove or add to task-config
@@ -7,6 +8,7 @@
     - tests        
     
 - algo:
+    - change scrape-rank feature to be seach-url aware
     - autotuning de duping?
     - ranking model instead of regression
     - summary / sentiment:

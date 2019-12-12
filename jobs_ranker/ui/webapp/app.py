@@ -271,6 +271,14 @@ def labels_history(task_name):
     return flask.render_template('rawtext_or_html.html', html=table)
 
 
+@app.route('/<task_name>/scrapes_history')
+def scrapes_history(task_name):
+    task = tasks[task_name]
+    table = task.all_crawls_lengths().to_html(
+        index=False, classes="table-sm table-bordered table-hover table-striped")
+    return flask.render_template('rawtext_or_html.html', html=table)
+
+
 @app.route('/log')
 @app.route('/logs')
 def server_logs():

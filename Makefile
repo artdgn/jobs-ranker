@@ -2,7 +2,7 @@ REPO_NAME=jobs-ranker
 VENV_ACTIVATE=. .venv/bin/activate
 PYTHON=.venv/bin/python3
 DOCKER_TAG=artdgn/$(REPO_NAME)
-DOCKER_DATA_ARG=-v $(realpath ./data):/data
+DOCKER_DATA_ARG=-v $(realpath ./data):/app/data
 DOCKER_TIME_ARG=-e TZ=$(shell cat /etc/timezone)
 
 .venv:

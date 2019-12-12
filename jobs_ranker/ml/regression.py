@@ -40,15 +40,15 @@ class PipelineFeatNames(Pipeline, LogCallsTimeAndOutput):
 
 class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
 
-    def __init__(self, cat_cols, num_cols):
+    def __init__(self, text_cols, num_cols):
         super().__init__()
-        self.cat_cols = cat_cols
+        self.text_cols = text_cols
         self.num_cols = num_cols
 
         self.reg = self._reg()
 
         self.transformer = FeatureUnion([
-            *(('tfidf_' + col, self._tfidf_pipe(col)) for col in self.cat_cols),
+            *(('tfidf_' + col, self._tfidf_pipe(col)) for col in self.text_cols),
             *(('noop_' + col, self._noop_pipe(col)) for col in self.num_cols),
         ])
 
@@ -107,7 +107,7 @@ class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
         if df[y_col].isnull().sum():
             raise ValueError('Target column contains nans')
 
-        x, y = df[self.cat_cols + self.num_cols], df[y_col].values
+        x, y = df[self.text_cols + self.num_cols], df[y_col].values
 
         metrics = self._train_eval(x, y, test_ratio=test_ratio, target_name=target_name)
 
@@ -121,15 +121,15 @@ class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
         return model_score
 
     @classmethod
-    def exhaustive_column_selection(cls, cat_cols, num_cols, x, y, metric, test_ratio):
+    def exhaustive_column_selection(cls, text_cols, num_cols, x, y, metric, test_ratio):
         res = []
 
         x_train, x_test, y_train, y_test = train_test_split(
             x, y, test_size=test_ratio or common.MLParams.test_ratio)
 
-        for cols in all_subsets(cat_cols + num_cols):
+        for cols in all_subsets(text_cols + num_cols):
             this = cls(
-                [col for col in cat_cols if col in cols],
+                [col for col in text_cols if col in cols],
                 [col for col in num_cols if col in cols])
 
             this.pipe.fit(x_train[list(cols)], y_train)
@@ -145,7 +145,7 @@ class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
         logger.info(f'best: {best_cols}')
 
         return cls(
-            [col for col in cat_cols if col in best_cols],
+            [col for col in text_cols if col in best_cols],
             [col for col in num_cols if col in best_cols])
 
     def print_top_n_features(self, x, y, n=30, target_name=''):

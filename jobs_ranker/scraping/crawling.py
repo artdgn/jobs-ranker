@@ -5,14 +5,12 @@ import subprocess
 import pandas as pd
 import pandas.errors
 
-from jobs_ranker.tasks.configs import TaskConfig
-
 from jobs_ranker import common
+from jobs_ranker.tasks.configs import TaskConfig
 from jobs_ranker.utils.logger import logger
 
 
 class JoraCrawlProcess:
-
     expected_jobs_per_search = 500
 
     def __init__(self, task_config: TaskConfig, http_cache=False):
@@ -89,13 +87,16 @@ class CrawlsFilesDao:
                           if col.startswith('download_')] + ['depth'])
             df.drop(drop_cols, axis=1, inplace=True, errors='ignore')
             df['scraped_file'] = filename
+            df['rank_in_scrape'] = 1 / (df.index.to_series() + 1)
             return df
 
     @classmethod
     def get_crawls(cls,
                    task_config: TaskConfig,
                    raise_on_missing=True,
-                   ignore_empty=True):
+                   ignore_empty=True,
+                   filter_relevance_date=True,
+                   ):
         all_crawls = [os.path.join(task_config.crawls_dir, f)
                       for f in sorted(os.listdir(task_config.crawls_dir))]
 
@@ -107,7 +108,7 @@ class CrawlsFilesDao:
                 f'No crawls found for task "{task_config.name}", '
                 f'please run scraping.')
 
-        if task_config.past_scrapes_relevance_date:
+        if filter_relevance_date and task_config.past_scrapes_relevance_date:
             filtered_crawls = cls._filter_recent(all_crawls, task_config=task_config)
             logger.info(f'got {len(filtered_crawls)} out of {len(all_crawls)} scrapes '
                         f'due to past_scrapes_relevance_date={task_config.past_scrapes_relevance_date}')
@@ -117,9 +118,13 @@ class CrawlsFilesDao:
 
     @classmethod
     def _filter_recent(cls, crawls, task_config: TaskConfig):
-        relevance_date = pd.to_datetime(task_config.past_scrapes_relevance_date)
         return [c for c in crawls
-                if pd.to_datetime(cls._crawl_date(c)) >= relevance_date]
+                if cls._is_date_relevant(c, task_config=task_config)]
+
+    @classmethod
+    def _is_date_relevant(cls, crawl, task_config: TaskConfig):
+        return (pd.to_datetime(cls._crawl_date(crawl)) >=
+                pd.to_datetime(task_config.past_scrapes_relevance_date))
 
     @staticmethod
     def _crawl_date(crawl):
@@ -139,3 +144,15 @@ class CrawlsFilesDao:
     @classmethod
     def rows_in_file(cls, filepath):
         return len(cls.read_scrapy_file(filepath))
+
+    @classmethod
+    def all_crawls_lengths(cls, task_config: TaskConfig):
+        all_crawls = cls.get_crawls(task_config=task_config,
+                                    raise_on_missing=False,
+                                    filter_relevance_date=False)
+        return pd.DataFrame(
+            {'crawl_date': [cls._crawl_date(c) for c in all_crawls],
+             'rows': [cls.rows_in_file(c) for c in all_crawls],
+             'is_relevant': [int(cls._is_date_relevant(c, task_config=task_config))
+                             for c in all_crawls]}
+        ).sort_values('crawl_date')

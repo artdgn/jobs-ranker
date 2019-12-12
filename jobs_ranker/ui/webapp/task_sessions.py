@@ -107,6 +107,9 @@ class TaskSession:
         else:
             return 0
 
+    def all_crawls_lengths(self):
+        return CrawlsFilesDao.all_crawls_lengths(self.get_config())
+
     def expected_jobs_per_crawl(self):
         return (len(self.get_config().search_urls) *
                 JoraCrawlProcess.expected_jobs_per_search)

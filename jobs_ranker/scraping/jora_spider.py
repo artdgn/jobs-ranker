@@ -7,11 +7,17 @@ class JoraSpider(scrapy.Spider):
 
     export_cols = ["title", "url", "salary",
                    "date", "company", "description",
-                   "raw_description"]
+                   "raw_description", "search_url"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.start_urls = kwargs.get('start_urls').split(',')
+        self._cur_start_url = None
+
+    def start_requests(self):
+        for url in self.start_urls:
+            self._cur_start_url = url
+            yield scrapy.Request(url, dont_filter=True)
 
     def parse(self, response):
         for job in response.css('#jobresults').css('.jwrap'):
@@ -24,6 +30,7 @@ class JoraSpider(scrapy.Spider):
                 'salary': job.css(".salary::text").extract_first(),
                 'date': job.css(".date::text").extract_first(),
                 'company': job.css(".company::text").extract_first(),
+                'search_url': self._cur_start_url,
             }
             if full_url:
                 yield scrapy.Request(full_url,

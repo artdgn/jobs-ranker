@@ -57,7 +57,11 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
     years_experience_col = 'years_exp_max'
+    scrape_rank_col = 'rank_in_scrape'
     target_col = 'target'
+    description_col = 'description'
+    title_col = 'title'
+    text_cols = [description_col, title_col]
 
     def __init__(self,
                  task_config: TaskConfig,
@@ -85,6 +89,18 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         self._busy_lock = Lock()
         self._bg_future = None
         _pandas_console_options()
+
+    @property
+    def num_cols_salary(self):
+        return [self.keyword_score_col,
+                self.years_experience_col,
+                self.scrape_rank_col]
+
+    @property
+    def num_cols_label(self):
+        return (self.intermidiate_score_cols +
+                [self.keyword_score_col, self.salary_guess_col,
+                 self.years_experience_col, self.scrape_rank_col])
 
     @property
     def loaded(self):
@@ -175,10 +191,10 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
             [CrawlsFilesDao.read_scrapy_file(file) for file in files],
             axis=0, sort=False). \
             drop_duplicates(subset=['url'], keep='last'). \
-            dropna(subset=['description'])
+            dropna(subset=[self.description_col])
 
         keep_inds, dup_dict_inds = deduplicate(
-            df_jobs['description'])
+            df_jobs[self.description_col])
 
         urls = df_jobs['url'].values
         self.dup_dict = {urls[i]: urls[sorted([i] + list(dups))]
@@ -190,7 +206,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
                     f'(deduped from {len(df_jobs)})')
 
     def url_data(self, url):
-        not_show_cols = (['description', 'raw_description', 'description_length',
+        not_show_cols = ([self.description_col, 'raw_description', 'description_length',
                           'scraped_file', 'salary', 'date'] +
                          self.intermidiate_score_cols)
         row = self.df_jobs.loc[self.df_jobs['url'] == url].iloc[0]
@@ -242,7 +258,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         def group_named_regex(word_list, name):
             return '(?P<%s>' % name + '|'.join(word_list) + ')'
 
-        for source, weight in product(['description', 'title'],
+        for source, weight in product([self.description_col, self.title_col],
                                       ['positive', 'negative']):
 
             group_kind = f'{source}_{weight}'
@@ -288,18 +304,14 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
 
         target_col = 'salary_high'
 
-        # cat_cols = ['description']
-        cat_cols = ['description', 'title']
-        df_train.dropna(subset=cat_cols + [target_col], inplace=True)
+        df_train.dropna(subset=self.text_cols + [target_col], inplace=True)
         logger.info(f'training with {len(df_train)} salaries')
 
         if len(df_train) >= common.MLParams.min_training_samples:
-            num_cols = [self.keyword_score_col, self.years_experience_col]
-            self.regressor_salary = regression.LGBPipeline(cat_cols=cat_cols,
-                                                           num_cols=num_cols)
-            self.reg_sal_model_score = self.regressor_salary.train_eval(df_train,
-                                                                        y_col=target_col,
-                                                                        target_name='salary')
+            self.regressor_salary = regression.LGBPipeline(
+                text_cols=self.text_cols, num_cols=self.num_cols_salary)
+            self.reg_sal_model_score = self.regressor_salary.train_eval(
+                df_train, y_col=target_col, target_name='salary')
         else:
             logger.warn(f'Not training salary regressor due to '
                         f'having only {len(df_train)} samples')
@@ -344,9 +356,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
 
         df_train = self._train_df_with_labels()
 
-        cat_cols = ['description', 'title']
-
-        df_train.dropna(subset=cat_cols, inplace=True)
+        df_train.dropna(subset=self.text_cols, inplace=True)
 
         logger.info(f'training with {len(df_train)} labels out of {self._labels_dao} '
                     f'due to missing data (possibly due to date filtering)')
@@ -354,13 +364,11 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         if len(df_train) >= common.MLParams.min_training_samples:
             df_train = self._add_relevance_features(df_train)
 
-            num_cols = (self.intermidiate_score_cols +
-                        [self.keyword_score_col, self.salary_guess_col, self.years_experience_col])
 
-            self.regressor = regression.LGBPipeline(cat_cols=cat_cols, num_cols=num_cols)
-            self.model_score = self.regressor.train_eval(df_train,
-                                                         y_col=self.target_col,
-                                                         target_name='label')
+            self.regressor = regression.LGBPipeline(
+                text_cols=self.text_cols, num_cols=self.num_cols_label)
+            self.model_score = self.regressor.train_eval(
+                df_train, y_col=self.target_col, target_name='label')
 
             keyword_metrics = regression.score_metrics(
                 df_train[self.keyword_score_col], df_train[self.target_col])
