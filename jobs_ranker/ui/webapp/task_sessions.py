@@ -6,7 +6,7 @@ from multiprocessing import Process
 import flask
 
 from jobs_ranker.scraping.crawling import CrawlsFilesDao, JoraCrawlProcess
-from jobs_ranker.joblist.ranking import JobsRanker
+from jobs_ranker.joblist import ranking
 from jobs_ranker.tasks.configs import TasksConfigsDao
 
 
@@ -39,9 +39,9 @@ class TaskSession:
             flask.abort(404, f'task "{self.task_name}" not found')
 
     @property
-    def ranker(self) -> JobsRanker:
+    def ranker(self) -> ranking.RankerAPI:
         if self._ranker is None:
-            self._ranker = JobsRanker(
+            self._ranker = ranking.get_ranker(
                 task_config=self.get_config(),
                 dedup_new=True,
                 skipped_as_negatives=False)

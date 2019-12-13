@@ -1,5 +1,6 @@
 import datetime
 import os
+import pandas as pd
 
 ROOT_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..'))
@@ -65,3 +66,12 @@ HEADERS = {
     'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,'
                   ' like Gecko) Chrome/74.0.3729.157 Safari/537.36',
 }
+
+
+def _pandas_console_options():
+    pd.set_option('display.max_colwidth', 300)
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 1000)
+
+_pandas_console_options()

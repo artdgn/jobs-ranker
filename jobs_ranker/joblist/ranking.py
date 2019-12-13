@@ -20,6 +20,19 @@ from jobs_ranker.utils.logger import logger
 
 class RankerAPI(abc.ABC):
 
+    @abc.abstractmethod
+    def __init__(self,
+                 task_config: TaskConfig,
+                 dedup_new=True,
+                 skipped_as_negatives=False
+                 ):
+        self.task_config = task_config
+        self.dedup_new = dedup_new
+        self.skipped_as_negatives = skipped_as_negatives
+
+        self.sort_col = None
+        self.recent_crawl_source = None
+
     @property
     @abc.abstractmethod
     def loaded(self):
@@ -51,6 +64,19 @@ class RankerAPI(abc.ABC):
     def rerank_jobs(self, background=False):
         pass
 
+    @property
+    @abc.abstractmethod
+    def ranking_scores(self):
+        return ''
+
+
+def get_ranker(task_config: TaskConfig,
+               dedup_new=True,
+               skipped_as_negatives=False) -> RankerAPI:
+    return JobsRanker(task_config=task_config,
+                      dedup_new=dedup_new,
+                      skipped_as_negatives=skipped_as_negatives)
+
 
 class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     keyword_score_col = 'keyword_score'
@@ -68,13 +94,13 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
                  dedup_new=True,
                  skipped_as_negatives=False
                  ):
-        super().__init__()
-        self.task_config = task_config
-        self.dedup_new = dedup_new
-        self.skipped_as_negatives = skipped_as_negatives
+        super().__init__(task_config=task_config,
+                         dedup_new=dedup_new,
+                         skipped_as_negatives=skipped_as_negatives)
         self.regressor = None
         self.model_score = None
         self.keyword_score = None
+        self.scrape_order_score = None
         self.regressor_salary = None
         self.reg_sal_model_score = None
         self.df_jobs = None
@@ -88,7 +114,6 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         self._bg_executor = ThreadPoolExecutor(max_workers=1)
         self._busy_lock = Lock()
         self._bg_future = None
-        _pandas_console_options()
 
     @property
     def num_cols_salary(self):
@@ -206,9 +231,10 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
                     f'(deduped from {len(df_jobs)})')
 
     def url_data(self, url):
-        not_show_cols = ([self.description_col, 'raw_description', 'description_length',
-                          'scraped_file', 'salary', 'date'] +
-                         self.intermidiate_score_cols)
+        not_show_cols = (
+                [self.description_col, 'raw_description', 'description_length',
+                 'scraped_file', 'salary', 'date', 'search_url'] +
+                self.intermidiate_score_cols)
         row = self.df_jobs.loc[self.df_jobs['url'] == url].iloc[0]
         row_disp = row.drop(not_show_cols, errors='ignore').dropna()
         row_disp = row_disp.loc[~row_disp.astype(str).isin(['0', '0.0', '[]'])]
@@ -227,19 +253,27 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         return next(self._unlabeled, None)
 
     def _sort_jobs(self, df):
-        sort_cols = [self.model_score_col, self.keyword_score_col]
+        sort_cols = [self.model_score_col,
+                     self.keyword_score_col,
+                     self.scrape_order_rank_col]
+        scores = [self.model_score,
+                  self.keyword_score,
+                  self.scrape_order_score]
 
-        if self.model_score is None or self.keyword_score is None:
+        if not any(scores):
             return df  # didn't train
 
-        if self.model_score < self.keyword_score or numpy.isnan(self.model_score):
-            sort_cols.reverse()
+        self.sort_col = sort_cols[int(numpy.nanargmax(scores))]
 
-        logger.info(f'Sorting by columns: {sort_cols} '
-                    f'(model-score = {self.model_score:.2f}, '
-                    f'keyword-score = {self.keyword_score:.2f})')
-        df.sort_values(sort_cols, ascending=False, inplace=True)
+        logger.info(f'Sorting by column: {self.sort_col} ({self.ranking_scores})')
+        df.sort_values(self.sort_col, ascending=False, inplace=True)
         return df
+
+    @property
+    def ranking_scores(self):
+        return (f'model-score = {self.model_score:.2f}, '
+                f'keyword-score = {self.keyword_score:.2f}, '
+                f'scrape-order-score = {self.scrape_order_score:.2f}')
 
     @classmethod
     def _extract_numeric_fields(cls, df):
@@ -310,8 +344,11 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         if len(df_train) >= common.MLParams.min_training_samples:
             self.regressor_salary = regression.LGBPipeline(
                 text_cols=self.text_cols, num_cols=self.num_cols_salary)
-            self.reg_sal_model_score = self.regressor_salary.train_eval(
+            model_metrics, _ = self.regressor_salary.train_eval(
                 df_train, y_col=target_col, target_name='salary')
+
+            self.reg_sal_model_score = model_metrics[regression.MAIN_METRIC]
+
         else:
             logger.warn(f'Not training salary regressor due to '
                         f'having only {len(df_train)} samples')
@@ -364,15 +401,21 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         if len(df_train) >= common.MLParams.min_training_samples:
             df_train = self._add_relevance_features(df_train)
 
-
             self.regressor = regression.LGBPipeline(
                 text_cols=self.text_cols, num_cols=self.num_cols_label)
-            self.model_score = self.regressor.train_eval(
-                df_train, y_col=self.target_col, target_name='label')
 
-            keyword_metrics = regression.score_metrics(
-                df_train[self.keyword_score_col], df_train[self.target_col])
-            self.keyword_score = keyword_metrics[regression.MAIN_METRIC]
+            model_metrics, baselines_metrics = self.regressor.train_eval(
+                df_train,
+                y_col=self.target_col,
+                target_name='label',
+                baselines=[df_train[self.keyword_score_col],
+                           df_train[self.scrape_order_rank_col]])
+
+            metric = regression.MAIN_METRIC
+            self.model_score = model_metrics[metric]
+            self.keyword_score = baselines_metrics[0][metric]
+            self.scrape_order_score = baselines_metrics[1][metric]
+
         else:
             logger.warn(f'Not training label regressor due to '
                         f'having only {len(df_train)} samples')
@@ -415,10 +458,3 @@ def _extract_year_experience(df, col_name):
     df.loc[df[col_name] >= 12, col_name] = 0
     df.loc[df[col_name].isna(), col_name] = 0
     return df
-
-
-def _pandas_console_options():
-    pd.set_option('display.max_colwidth', 300)
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.width', 1000)

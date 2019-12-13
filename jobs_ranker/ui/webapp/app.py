@@ -120,6 +120,8 @@ def labeling(task_name):
             back_url=flask.url_for('task_description', task_name=task_name),
             back_text=f'Back:')
     else:
+        flask.flash(f'Ranking based on "{task.ranker.sort_col}" '
+                    f'({task.ranker.ranking_scores})', 'info')
         # go label it
         return flask.redirect(
             flask.url_for('label_url_get', task_name=task_name, url=url))
@@ -234,7 +236,7 @@ def scraping(task_name):
 
     try:
         days_since_last = task.days_since_last_crawl()
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         days_since_last = None
         flask.flash(f'no crawl data found for task (is this a new task?)', 'warning')
 

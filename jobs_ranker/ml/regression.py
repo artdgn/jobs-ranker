@@ -79,14 +79,20 @@ class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
                 name=col,
                 validate=False))])
 
-    def _train_eval(self, x, y, test_ratio, target_name=''):
+    def _train_eval(self, x, y, test_ratio, target_name='', baselines=()):
         # split
-        x_train, x_test, y_train, y_test = train_test_split(
-            x, y, test_size=test_ratio or common.MLParams.test_ratio)
+        x_train, x_test, y_train, y_test, _, test_mask = train_test_split(
+            x, y, np.arange(len(y)),
+            test_size=test_ratio or common.MLParams.test_ratio)
         self.pipe.fit(x_train, y_train)
         y_pred = self.predict(x_test)
+
         metrics = self.print_metrics(y_test, y_pred, target_name=target_name)
-        return metrics
+
+        return metrics, self._score_baselines(baselines, test_mask, y_test)
+
+    def _score_baselines(self, baselines, test_mask, y_true):
+        return [score_metrics(y_true, vec[test_mask]) for vec in baselines]
 
     def _refit(self, x, y):
         self.pipe.fit(x, y)
@@ -102,23 +108,29 @@ class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
             logger.info(f"{target_name}, binary scores:\n {binary_metrics}")
         return metrics
 
-    def train_eval(self, df, y_col, test_ratio=None, target_name=''):
+    def train_eval(self, df, y_col, test_ratio=None, target_name='', baselines=()):
+        """
+        :param target_name: for printouts
+        :param baselines: baseline predictors to be scored on the same test-set
+        :return: model and baseline score metrics
+        """
 
         if df[y_col].isnull().sum():
             raise ValueError('Target column contains nans')
 
         x, y = df[self.text_cols + self.num_cols], df[y_col].values
 
-        metrics = self._train_eval(x, y, test_ratio=test_ratio, target_name=target_name)
+        metrics, baselines_metrics = self._train_eval(x, y,
+                                                      test_ratio=test_ratio,
+                                                      target_name=target_name,
+                                                      baselines=baselines)
 
         self.print_top_n_features(
             x, y, n=common.InfoParams.top_n_feat, target_name=target_name)
 
         self._refit(x, y)
 
-        model_score = metrics[MAIN_METRIC]
-
-        return model_score
+        return metrics, baselines_metrics
 
     @classmethod
     def exhaustive_column_selection(cls, text_cols, num_cols, x, y, metric, test_ratio):
@@ -180,13 +192,14 @@ class RFPipeline(RegPipelineBase):
         return RandomForestRegressor(
             n_estimators=common.MLParams.rf_n_estimators, oob_score=True, n_jobs=-1)
 
-    def _train_eval(self, x, y, test_ratio, target_name=''):
+    def _train_eval(self, x, y, test_ratio, target_name='', baselines=()):
         if not test_ratio:
             # use OOB scores instead test and refit
             self.pipe.fit(x, y)
             return self.print_metrics(y, self.reg.oob_prediction_, target_name=target_name)
         else:
-            return super()._train_eval(x, y, test_ratio=test_ratio, target_name=target_name)
+            return super()._train_eval(x, y, test_ratio=test_ratio,
+                                       target_name=target_name, baselines=baselines)
 
 
 class LGBPipeline(RegPipelineBase):
@@ -210,13 +223,14 @@ class LGBPipeline(RegPipelineBase):
             n_estimators=common.MLParams.lgbm_max_n_estimators,
             learning_rate=common.MLParams.lgbm_learning_rate)
 
-    def _train_eval(self, x, y, test_ratio, target_name=''):
-        x_train, x_test, y_train, y_test = train_test_split(
-            x, y, test_size=test_ratio or common.MLParams.test_ratio)
+    def _train_eval(self, x, y, test_ratio, target_name='', baselines=()):
+        x_train, x_test, y_train, y_test, _, test_mask = train_test_split(
+            x, y, np.arange(len(y)),
+            test_size=test_ratio or common.MLParams.test_ratio)
         self.pipe.fit(x_train, y_train, regressor__early_stopping=True)
         y_pred = self.predict(x_test)
         metrics = self.print_metrics(y_test, y_pred, target_name=target_name)
-        return metrics
+        return metrics, self._score_baselines(baselines, test_mask, y_test)
 
 
 def binary_scores(y, y_pred):

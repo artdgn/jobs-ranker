@@ -8,7 +8,7 @@
     - tests        
     
 - algo:
-    - change scrape-rank feature to be seach-url aware
+    - test split not shuffled
     - autotuning de duping?
     - ranking model instead of regression
     - summary / sentiment:
