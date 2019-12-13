@@ -67,7 +67,7 @@ def edit_task(task_name):
         try:
             task.update_config(form.get('text'))
             flask.flash(f'Task edit succesful!', 'success')
-            return flask.redirect(flask.url_for('task_description', task_name=task_name))
+            return flask.redirect(flask.url_for('reload_ranker', task_name=task_name))
 
         except ValueError as e:
             message = str(e)

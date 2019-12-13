@@ -83,7 +83,9 @@ class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
         # split
         x_train, x_test, y_train, y_test, _, test_mask = train_test_split(
             x, y, np.arange(len(y)),
-            test_size=test_ratio or common.MLParams.test_ratio)
+            test_size=test_ratio or common.MLParams.test_ratio,
+            shuffle=common.MLParams.shuffle_split
+        )
         self.pipe.fit(x_train, y_train)
         y_pred = self.predict(x_test)
 
@@ -137,7 +139,9 @@ class RegPipelineBase(abc.ABC, LogCallsTimeAndOutput):
         res = []
 
         x_train, x_test, y_train, y_test = train_test_split(
-            x, y, test_size=test_ratio or common.MLParams.test_ratio)
+            x, y,
+            test_size=test_ratio or common.MLParams.test_ratio,
+            shuffle=common.MLParams.shuffle_split)
 
         for cols in all_subsets(text_cols + num_cols):
             this = cls(
@@ -204,14 +208,19 @@ class RFPipeline(RegPipelineBase):
 
 class LGBPipeline(RegPipelineBase):
     class LGBMRegEarlyStop(LGBMRegressor):
+
         def fit(self, X, y, early_stopping=False):
             if early_stopping:
-                x_train, x_valid, y_train, y_valid = train_test_split(X, y, test_size=0.3)
+                x_train, x_valid, y_train, y_valid = train_test_split(
+                    X, y, test_size=0.3,
+                    shuffle=common.MLParams.shuffle_split)
+
                 LGBMRegressor.fit(self, x_train, y_train,
                                   eval_metric='l2',
                                   early_stopping_rounds=200,
                                   eval_set=(x_valid, y_valid),
                                   verbose=False)
+
                 logger.info(f'LGBM early stopping: '
                             f'setting n_estimators to best_iteration_({self.best_iteration_})')
                 self.n_estimators = self.best_iteration_
@@ -226,7 +235,8 @@ class LGBPipeline(RegPipelineBase):
     def _train_eval(self, x, y, test_ratio, target_name='', baselines=()):
         x_train, x_test, y_train, y_test, _, test_mask = train_test_split(
             x, y, np.arange(len(y)),
-            test_size=test_ratio or common.MLParams.test_ratio)
+            test_size=test_ratio or common.MLParams.test_ratio,
+            shuffle=common.MLParams.shuffle_split)
         self.pipe.fit(x_train, y_train, regressor__early_stopping=True)
         y_pred = self.predict(x_test)
         metrics = self.print_metrics(y_test, y_pred, target_name=target_name)

@@ -36,6 +36,7 @@ def current_date():
 class MLParams:
     min_training_samples = 10
     test_ratio = 0.3
+    shuffle_split = False
 
     rf_n_estimators = 100
 
