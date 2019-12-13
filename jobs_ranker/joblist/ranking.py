@@ -124,8 +124,10 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     @property
     def num_cols_label(self):
         return (self.intermidiate_score_cols +
-                [self.keyword_score_col, self.salary_guess_col,
-                 self.years_experience_col, self.scrape_order_rank_col])
+                [self.keyword_score_col,
+                 self.salary_guess_col,
+                 self.years_experience_col,
+                 self.scrape_order_rank_col])
 
     @property
     def loaded(self):
@@ -308,11 +310,13 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
             if group_col not in self.intermidiate_score_cols:
                 self.intermidiate_score_cols.append(group_col)
 
+        rank_params = dict(pct=True, ascending=True)
+
         df[self.keyword_score_col] = (
-                1 / df.description_positive_count.rank(ascending=False)
-                - 1 / df.description_negative_count.rank(ascending=False)
-                + 1 / df.title_positive_count.rank(ascending=False)
-                - 1 / df.title_negative_count.rank(ascending=False))
+                df.description_positive_count.rank(**rank_params)
+                + df.title_positive_count.rank(**rank_params)
+                - df.description_negative_count.rank(**rank_params)
+                - df.title_negative_count.rank(**rank_params))
 
         return df
 

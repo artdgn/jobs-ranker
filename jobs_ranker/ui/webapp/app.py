@@ -35,7 +35,7 @@ def not_found(message):
 @app.route('/<task_name>/')
 def task_description(task_name):
     task = tasks[task_name]
-
+    task.should_notify_scores = True
     return flask.render_template('task_page.html',
                                  task_name=task_name,
                                  config_data=str(task.get_config()))
@@ -102,6 +102,14 @@ def _ranker_busy_page(task_name):
         task_name=task_name)
 
 
+def _maybe_notify_scores(task_name):
+    task = tasks[task_name]
+    if task.should_notify_scores:
+        flask.flash(f'Ranking based on "{task.ranker.sort_col}" '
+                    f'({task.ranker.ranking_scores})', 'info')
+        task.should_notify_scores = False
+
+
 @app.route('/<task_name>/label/')
 def labeling(task_name):
     task = tasks[task_name]
@@ -120,8 +128,7 @@ def labeling(task_name):
             back_url=flask.url_for('task_description', task_name=task_name),
             back_text=f'Back:')
     else:
-        flask.flash(f'Ranking based on "{task.ranker.sort_col}" '
-                    f'({task.ranker.ranking_scores})', 'info')
+        _maybe_notify_scores(task_name)
         # go label it
         return flask.redirect(
             flask.url_for('label_url_get', task_name=task_name, url=url))

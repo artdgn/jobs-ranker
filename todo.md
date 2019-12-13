@@ -1,14 +1,30 @@
 - eng:
+    - baseline rankers:
+        - scrape order
+        - keyword
+    - auto-stuff:
+        - auto scrape / ask when newest is 1 day old
+        - auto recalc when 10 labels added
+        - only retrain salaries when 10% salaries added
+        - label new while scraping (append to last full one)  
+        - auto reload when scraping is in progress and 10 more jobs were added 
+        - scraping prog banner
+        
+    - browser extension frontend
+    
     - add jokes: popups for labeling, waiting gifs
     - remove unused options and params
+    - distinct relevance categories and definitions (with popups)
     - webapp: 
         - optional parameters (dedup, cache, ..) - remove or add to task-config
     - display closest labeled dup for each + simil score + label
+    - choice of sort order (model / keywords / scrape-order)
     - refactor dups
     - tests        
     
 - algo:
-    - test split not shuffled
+    - use keyword-score / order-score as surrogate labels (feature selection / pre-training) 
+    - async feature selection / tuning and save into profile (or save config path)
     - autotuning de duping?
     - ranking model instead of regression
     - summary / sentiment:

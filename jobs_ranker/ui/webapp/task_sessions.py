@@ -28,6 +28,7 @@ class TaskSession:
         self._cur_urls = set()
         self._ranker = None
         self._skipped = set()
+        self.should_notify_scores = True
         self._crawler = None
         self._crawl_subproc = None
         self.recent_edit_attempt = None
@@ -45,7 +46,7 @@ class TaskSession:
                 task_config=self.get_config(),
                 dedup_new=True,
                 skipped_as_negatives=False)
-            self.reset_urls()
+            self.reset_session_state()
         return self._ranker
 
     @raise_404_on_filenotfound
@@ -66,18 +67,19 @@ class TaskSession:
         self.ranker.labeler.add_label(url, label)
         self._cur_urls.discard(url)
 
-    def reset_urls(self):
+    def reset_session_state(self):
         self._cur_urls = set()
         self._skipped = set()
+        self.should_notify_scores = True
 
     @raise_404_on_filenotfound
     def reload_ranker(self):
         self.ranker.load_and_process_data(background=True)
-        self.reset_urls()
+        self.reset_session_state()
 
     def recalc(self):
         self.ranker.rerank_jobs(background=True)
-        self.reset_urls()
+        self.reset_session_state()
 
     def skip(self, url):
         self._skipped.add(url)
