@@ -7,7 +7,8 @@ class JoraSpider(scrapy.Spider):
 
     export_cols = ["title", "url", "salary",
                    "date", "company", "description",
-                   "raw_description", "search_url"]
+                   "raw_description", "search_url",
+                   "depth"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

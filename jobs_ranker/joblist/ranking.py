@@ -57,7 +57,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     model_score_col = 'model_score'
     salary_guess_col = 'salary_guess'
     years_experience_col = 'years_exp_max'
-    scrape_rank_col = 'rank_in_scrape'
+    scrape_order_rank_col = 'scrape_order_rank'
     target_col = 'target'
     description_col = 'description'
     title_col = 'title'
@@ -94,13 +94,13 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     def num_cols_salary(self):
         return [self.keyword_score_col,
                 self.years_experience_col,
-                self.scrape_rank_col]
+                self.scrape_order_rank_col]
 
     @property
     def num_cols_label(self):
         return (self.intermidiate_score_cols +
                 [self.keyword_score_col, self.salary_guess_col,
-                 self.years_experience_col, self.scrape_rank_col])
+                 self.years_experience_col, self.scrape_order_rank_col])
 
     @property
     def loaded(self):

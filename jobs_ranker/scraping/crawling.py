@@ -76,19 +76,38 @@ class JoraCrawlProcess:
 
 class CrawlsFilesDao:
 
-    @staticmethod
-    def read_scrapy_file(filename):
+    @classmethod
+    def read_scrapy_file(cls, filename):
         try:
             df = pd.read_csv(filename)
         except pandas.errors.EmptyDataError:
             return pd.DataFrame()
         else:
-            drop_cols = ([col for col in df.columns
-                          if col.startswith('download_')] + ['depth'])
+            drop_cols = [col for col in df.columns if col.startswith('download_')]
             df.drop(drop_cols, axis=1, inplace=True, errors='ignore')
+
             df['scraped_file'] = filename
-            df['rank_in_scrape'] = 1 / (df.index.to_series() + 1)
+
+            df = cls.add_scrape_order_rank(df)
+
             return df
+
+    @classmethod
+    def add_scrape_order_rank(cls, df):
+        col_name = 'scrape_order_rank'
+        rank_params = dict(pct=True, ascending=False)
+
+        if 'depth' in df.columns:
+            df[col_name] = df['depth'].rank(method='dense', **rank_params)
+
+        elif 'search_url' in df.columns:
+            # backwards compat
+            df[col_name] = (df.reset_index().groupby('search_url')
+                            ['index'].rank(**rank_params))
+        else:
+            # backwards compat
+            df[col_name] = df.reset_index()['index'].rank(**rank_params)
+        return df
 
     @classmethod
     def get_crawls(cls,
@@ -110,8 +129,9 @@ class CrawlsFilesDao:
 
         if filter_relevance_date and task_config.past_scrapes_relevance_date:
             filtered_crawls = cls._filter_recent(all_crawls, task_config=task_config)
-            logger.info(f'got {len(filtered_crawls)} out of {len(all_crawls)} scrapes '
-                        f'due to past_scrapes_relevance_date={task_config.past_scrapes_relevance_date}')
+            logger.info(f'got {len(filtered_crawls)} out of {len(all_crawls)} '
+                        f'scrapes due to past_scrapes_relevance_date='
+                        f'{task_config.past_scrapes_relevance_date}')
             return filtered_crawls
         else:
             return all_crawls
