@@ -44,8 +44,7 @@ class TaskSession:
         if self._ranker is None:
             self._ranker = ranking.get_ranker(
                 task_config=self.get_config(),
-                dedup_new=True,
-                skipped_as_negatives=False)
+                dedup_new=True)
             self.reset_session_state()
         return self._ranker
 

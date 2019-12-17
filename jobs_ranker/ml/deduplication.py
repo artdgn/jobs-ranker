@@ -10,7 +10,11 @@ from jobs_ranker.utils.instrumentation import log_time_and_shape
 
 
 @log_time_and_shape
-def deduplicate(strings):
+def calc_duplicates(strings, keep='first'):
+
+    if keep not in ['first', 'last']:
+        raise ValueError(f'keep value can only be "first" or "last"')
+
     strings = np.array(strings).astype(str)
     dup_i, dup_j = duplicates_by_tfidf_cosine(strings)
 
@@ -20,8 +24,10 @@ def deduplicate(strings):
         dup_dict_inds[j].add(i)
 
     keep_inds = set()
+    keep_i = 0 if keep == 'first' else -1
     for i in range(len(strings)):
-        keep_inds.add(sorted([i] + list(dup_dict_inds[i]))[-1])
+        keep_inds.add(sorted([i] + list(dup_dict_inds[i]))[keep_i])
+
     return sorted(list(keep_inds)), dup_dict_inds
 
 

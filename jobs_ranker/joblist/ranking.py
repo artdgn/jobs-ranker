@@ -11,7 +11,7 @@ import pandas as pd
 from jobs_ranker import common
 from jobs_ranker.joblist.labeled import LabeledJobs, LabelsAPI
 from jobs_ranker.ml import regression
-from jobs_ranker.ml.descriptions_similarity import deduplicate
+from jobs_ranker.ml.deduplication import calc_duplicates
 from jobs_ranker.scraping.crawling import CrawlsFilesDao
 from jobs_ranker.tasks.configs import TaskConfig, TasksConfigsDao
 from jobs_ranker.utils.instrumentation import LogCallsTimeAndOutput
@@ -23,12 +23,10 @@ class RankerAPI(abc.ABC):
     @abc.abstractmethod
     def __init__(self,
                  task_config: TaskConfig,
-                 dedup_new=True,
-                 skipped_as_negatives=False
+                 dedup_recent=True
                  ):
         self.task_config = task_config
-        self.dedup_new = dedup_new
-        self.skipped_as_negatives = skipped_as_negatives
+        self.dedup_recent = dedup_recent
 
         self.sort_col = None
         self.recent_crawl_source = None
@@ -71,11 +69,9 @@ class RankerAPI(abc.ABC):
 
 
 def get_ranker(task_config: TaskConfig,
-               dedup_new=True,
-               skipped_as_negatives=False) -> RankerAPI:
+               dedup_new=True) -> RankerAPI:
     return JobsRanker(task_config=task_config,
-                      dedup_new=dedup_new,
-                      skipped_as_negatives=skipped_as_negatives)
+                      dedup_recent=dedup_new)
 
 
 class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
@@ -91,20 +87,18 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
 
     def __init__(self,
                  task_config: TaskConfig,
-                 dedup_new=True,
-                 skipped_as_negatives=False
-                 ):
+                 dedup_recent=True):
         super().__init__(task_config=task_config,
-                         dedup_new=dedup_new,
-                         skipped_as_negatives=skipped_as_negatives)
+                         dedup_recent=dedup_recent)
         self.regressor = None
         self.model_score = None
         self.keyword_score = None
         self.scrape_order_score = None
         self.regressor_salary = None
         self.reg_sal_model_score = None
-        self.df_jobs = None
-        self.df_jobs_all = None
+        self.df_recent = None
+        self.df_all_deduped = None
+        self.df_all_read = None
         self.intermidiate_score_cols = []
         self._labels_dao = None
 
@@ -132,7 +126,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     @property
     def loaded(self):
         self._check_bg_thread()
-        return self.df_jobs is not None
+        return self.df_recent is not None
 
     @property
     def busy(self):
@@ -145,6 +139,8 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     @property
     def labeler(self):
         if self._labels_dao is None:
+            if not self.dup_dict:
+                raise ValueError(f'dup_dict is not set')
             self._labels_dao = LabeledJobs(task_name=self.task_config.name,
                                            dup_dict=self.dup_dict)
         return self._labels_dao
@@ -167,8 +163,9 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         with self._busy_lock:
             self.task_config = TasksConfigsDao.load_config(self.task_config.name)
             self._read_all_scraped()
-            self._read_last_scraped(dedup=self.dedup_new)
-        if len(self.df_jobs):
+            self._calc_duplicates()
+            self._set_df_recent()
+        if len(self.df_recent):
             self._rank_jobs()
 
     def rerank_jobs(self, background=False):
@@ -180,24 +177,58 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
     def _rank_jobs(self):
         with self._busy_lock:
             self.task_config = TasksConfigsDao.load_config(self.task_config.name)
-            self.df_jobs = self._add_model_score(self.df_jobs)
-            self.df_jobs = self._sort_jobs(self.df_jobs)
+            self.df_recent = self._add_model_score(self.df_recent)
+            self.df_recent = self._sort_jobs(self.df_recent)
             self._unlabeled = None
 
-    def _read_last_scraped(self, dedup=True):
+    def _read_all_scraped(self):
+        files = CrawlsFilesDao.get_crawls(
+            self.task_config, raise_on_missing=True)
+
+        df_all = pd.concat(
+            [CrawlsFilesDao.read_scrapy_file(file) for file in files],
+            axis=0, sort=False). \
+            dropna(subset=[self.description_col])
+
+        # basic deduping by url for all-read jobs
+        self.df_all_read = df_all.drop_duplicates(
+            subset=['url'], keep='last')
+
+    def _calc_duplicates(self):
+
+        df_all = self.df_all_read
+
+        keep_inds, dup_dict_inds = calc_duplicates(
+            df_all[self.description_col], keep='last')
+
+        urls = df_all['url'].values
+        self.dup_dict = {urls[i]: urls[sorted([i] + list(dups))]
+                         for i, dups in dup_dict_inds.items()}
+
+        # dedup by content and keep last
+        self.df_all_deduped = df_all.iloc[keep_inds]
+
+        logger.info(f'total historic jobs DF: {len(self.df_all_deduped)} '
+                    f'(deduped from {len(df_all)})')
+
+    def _set_df_recent(self):
         self.recent_crawl_source = CrawlsFilesDao.get_crawls(
             task_config=self.task_config)[-1]
-        full_df = CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source)
-        if not dedup:
-            self.df_jobs = full_df
+        recent_full_df = CrawlsFilesDao.read_scrapy_file(self.recent_crawl_source)
+        if not self.dedup_recent:
+            self.df_recent = recent_full_df
             self._add_duplicates_column()
         else:
-            self.df_jobs = (
-                self.df_jobs_all.loc[self.df_jobs_all['scraped_file'] ==
-                                     self.recent_crawl_source, :])
+            self.df_recent = (
+                self.df_all_deduped.loc[self.df_all_deduped['scraped_file'] ==
+                                        self.recent_crawl_source, :])
+            unlabeled = [u for u in self.df_recent['url']
+                         if not self.labeler.is_labeled(u)]
+            self.df_recent = self.df_recent[self.df_recent['url'].isin(unlabeled)]
+
         logger.info(f'most recent scrape DF: '
-                    f'{len(self.df_jobs)} ({self.recent_crawl_source}, '
-                    f'all scraped: {len(full_df)})')
+                    f'{len(self.df_recent)} ({self.recent_crawl_source}, '
+                    f'all scraped: {len(recent_full_df)})')
 
     def _add_duplicates_column(self):
         dup_no_self = {k: [u for u in v if u != k]
@@ -208,45 +239,23 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
             'duplicates': dups_lists,
             # 'duplicates_avg_label':
         })
-        self.df_jobs = pd.merge(self.df_jobs, df_dups, on='url', how='left')
-
-    def _read_all_scraped(self):
-        files = CrawlsFilesDao.get_crawls(
-            self.task_config, raise_on_missing=True)
-
-        df_jobs = pd.concat(
-            [CrawlsFilesDao.read_scrapy_file(file) for file in files],
-            axis=0, sort=False). \
-            drop_duplicates(subset=['url'], keep='last'). \
-            dropna(subset=[self.description_col])
-
-        keep_inds, dup_dict_inds = deduplicate(
-            df_jobs[self.description_col])
-
-        urls = df_jobs['url'].values
-        self.dup_dict = {urls[i]: urls[sorted([i] + list(dups))]
-                         for i, dups in dup_dict_inds.items()}
-
-        self.df_jobs_all = df_jobs.iloc[keep_inds]
-
-        logger.info(f'total historic jobs DF: {len(self.df_jobs_all)} '
-                    f'(deduped from {len(df_jobs)})')
+        self.df_recent = pd.merge(self.df_recent, df_dups, on='url', how='left')
 
     def url_data(self, url):
         not_show_cols = (
                 [self.description_col, 'raw_description', 'description_length',
                  'scraped_file', 'salary', 'date', 'search_url'] +
                 self.intermidiate_score_cols)
-        row = self.df_jobs.loc[self.df_jobs['url'] == url].iloc[0]
+        row = self.df_recent.loc[self.df_recent['url'] == url].iloc[0]
         row_disp = row.drop(not_show_cols, errors='ignore').dropna()
         row_disp = row_disp.loc[~row_disp.astype(str).isin(['0', '0.0', '[]'])]
         raw_description = row['raw_description'] if 'raw_description' in row.index else ''
         return row_disp, raw_description
 
     def _unlabeled_gen(self):
-        urls = self.df_jobs['url'].tolist()
+        urls = self.df_recent['url'].tolist()
         for url in urls:
-            if not self.labeler.labeled(url):
+            if not self.labeler.is_labeled(url):
                 yield url
 
     def next_unlabeled(self):
@@ -337,7 +346,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         return df
 
     def _train_salary_regressor(self):
-        df_train = self.df_jobs_all.copy()
+        df_train = self.df_all_deduped.copy()
         df_train = self._add_salary_features(df_train)
 
         target_col = 'salary_high'
@@ -374,22 +383,15 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         return df
 
     def _train_df_with_labels(self):
-        df_jobs_all = self.df_jobs_all.copy()
 
-        labels_df = self.labeler.export_df()
+        deduped_labels = self.labeler.export_df(dedup=True)
 
-        df_train = labels_df.set_index('url'). \
-            join(df_jobs_all.set_index('url'), how='left')
+        # using df_all_read with duplicates because can't know which duplicate was labeled
+        # but since labeled df will be deduped - we'll have no dups after join
+        df_train = deduped_labels.set_index('url'). \
+            join(self.df_all_read.set_index('url'), how='left')
 
         df_train[self.target_col] = df_train[self.labeler.label_col]
-
-        if self.skipped_as_negatives:
-            df_past_skipped = df_jobs_all.loc[
-                              ~df_jobs_all.url.isin(
-                                  df_train.reset_index()['url'].tolist() +
-                                  self.df_jobs['url'].tolist()), :].copy()
-            df_past_skipped.loc[:, self.target_col] = 0.0
-            df_train = df_train.append(df_past_skipped, sort=True)
 
         return df_train
 

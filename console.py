@@ -22,9 +22,6 @@ def parse_args():
     parser.add_argument("-n", "--no-dedup", action="store_true",
                         help="prevent deduplication of newest scrapes w/r to"
                              " historic scrapes. default false")
-    parser.add_argument("-a", "--assume-negative", action="store_true",
-                        help="assume jobs left unlabeled previously as "
-                             "labeled negative. default false")
     return parser.parse_args()
 
 
@@ -41,8 +38,7 @@ def main():
 
     ranker = JobsRanker(
         task_config=task_config,
-        dedup_new=(not args.no_dedup),
-        skipped_as_negatives=args.assume_negative)
+        dedup_recent=(not args.no_dedup))
 
     ranker.load_and_process_data(background=False)
 

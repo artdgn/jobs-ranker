@@ -56,13 +56,10 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
             self._df = pd.DataFrame({self.url_col: [], self.label_col: [], self.timestamp_col: []})
 
     def _urls_with_dups(self, url):
-        return self.dup_dict[url] if url in self.dup_dict else [url]
+        return self.dup_dict.get(url, [url])
 
-    def _labeled_url(self, url):
-        return url in self._df[self.url_col].values
-
-    def labeled(self, url):
-        return any(self._labeled_url(u) for u in self._urls_with_dups(url))
+    def is_labeled(self, url):
+        return self._df[self.url_col].isin(self._urls_with_dups(url)).any()
 
     def add_label(self, url, label):
         if self.is_valid_label(label):
@@ -95,7 +92,7 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
                 f'{pos / total:.1%} pos, '
                 f'{(total - pos - neg) / total:.1%} partial relevance)')
 
-    def export_df(self):
+    def export_df(self, dedup=True):
 
         df = self._df.copy()
 
@@ -104,14 +101,18 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
             replace(self.neg_label, '0.0'). \
             astype(float)
 
-        for url in df[self.url_col]:
-            if url in df[self.url_col] and url in self.dup_dict and len(self.dup_dict[url]):
-                dup_urls = self.dup_dict[url]
-                if self.labeled(url):
-                    label = df.loc[df[self.url_col].isin(dup_urls)][self.label_col].iloc[-1]
-                    urls = self._urls_with_dups(url)
-                    df.loc[df[self.url_col].isin(urls), self.label_col] = label
-                    df = df.loc[~df[self.url_col].isin(dup_urls[:-1])]
+        if dedup:
+            all_urls = df[self.url_col].values
+            for url in all_urls:
+                dup_urls = self.dup_dict.get(url, [])
+                if (len(dup_urls) >= 2  # has dups
+                    and df[self.url_col].eq(url).any()  # url still here
+                    and df[self.url_col].isin(dup_urls).sum() >= 2  # dups are still here
+                ):
+                    dups_rows = df.loc[df[self.url_col].isin(dup_urls)]
+                    # keep last
+                    remove_urls = dups_rows.iloc[:-1][self.url_col].values
+                    df = df.loc[~df[self.url_col].isin(remove_urls)]
         return df
 
     def export_html_table(self):
