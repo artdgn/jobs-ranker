@@ -5,6 +5,7 @@ from multiprocessing import Process
 
 import flask
 
+from jobs_ranker.joblist.labeled import labels_history_table
 from jobs_ranker.scraping.crawling import CrawlsFilesDao, JoraCrawlProcess
 from jobs_ranker.joblist import ranking
 from jobs_ranker.tasks.configs import TasksConfigsDao
@@ -47,6 +48,9 @@ class TaskSession:
                 dedup_new=True)
             self.reset_session_state()
         return self._ranker
+
+    def labels_history_table(self):
+        return labels_history_table(task_name=self.task_name)
 
     @raise_404_on_filenotfound
     def load_ranker(self):

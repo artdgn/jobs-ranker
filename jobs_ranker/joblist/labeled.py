@@ -125,3 +125,9 @@ class LabeledJobs(LabelsAPI, LogCallsTimeAndOutput):
                 .set_table_attributes('class="table-sm table-bordered table-hover table-striped"')
                 .background_gradient(cmap='Purples', subset=['label'])
                 .render())
+
+
+def labels_history_table(task_name):
+    labeler = LabeledJobs(task_name=task_name)
+    labeler.load()
+    return labeler.export_html_table()

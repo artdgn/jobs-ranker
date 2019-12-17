@@ -401,7 +401,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
 
         df_train.dropna(subset=self.text_cols, inplace=True)
 
-        logger.info(f'training with {len(df_train)} labels out of {self._labels_dao} '
+        logger.info(f'training with {len(df_train)} labels out of {self.labeler} '
                     f'due to missing data (possibly due to date filtering)')
 
         if len(df_train) >= common.MLParams.min_training_samples:

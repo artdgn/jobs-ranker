@@ -36,6 +36,7 @@ def not_found(message):
 def task_description(task_name):
     task = tasks[task_name]
     task.should_notify_scores = True
+    # task.load_ranker()  # TODO: handle FileNotFound if new task
     return flask.render_template('task_page.html',
                                  task_name=task_name,
                                  config_data=str(task.get_config()))
@@ -203,8 +204,7 @@ def label_url_post(task_name, url):
 
 @app.route('/<task_name>/label/skip/<path:url>/')
 def skip_url(task_name, url):
-    task = tasks[task_name]
-    task.skip(url)
+    tasks[task_name].skip(url)
     logger.info(f'skip: {url} for "{task_name}"')
     flask.flash(f'skipped url {url} for "{task_name}"', 'warning')
     return flask.redirect(flask.url_for('labeling', task_name=task_name))
@@ -212,8 +212,7 @@ def skip_url(task_name, url):
 
 @app.route('/<task_name>/label/recalc/')
 def recalc(task_name):
-    task = tasks[task_name]
-    task.recalc()
+    tasks[task_name].recalc()
     logger.info(f'recalculating: {task_name}')
     flask.flash(f're-calculating rankings for task "{task_name}"', 'info')
     return flask.redirect(flask.url_for('labeling', task_name=task_name))
@@ -265,8 +264,7 @@ def scraping(task_name):
 
 @app.route('/<task_name>/scrape/start')
 def scrape_start(task_name):
-    task = tasks[task_name]
-    task.start_crawl()
+    tasks[task_name].start_crawl()
     logger.info(f'started scraping for {task_name}')
     flask.flash(f'Started scraping for task "{task_name}"', 'success')
     return flask.redirect(flask.url_for('scraping', task_name=task_name))
@@ -274,16 +272,14 @@ def scrape_start(task_name):
 
 @app.route('/<task_name>/labels_history')
 def labels_history(task_name):
-    task = tasks[task_name]
-    task.ranker.labeler.load()
-    table = task.ranker.labeler.export_html_table()
-    return flask.render_template('rawtext_or_html.html', html=table)
+    return flask.render_template(
+        'rawtext_or_html.html',
+        html=tasks[task_name].labels_history_table())
 
 
 @app.route('/<task_name>/scrapes_history')
 def scrapes_history(task_name):
-    task = tasks[task_name]
-    table = task.all_crawls_lengths().to_html(
+    table = tasks[task_name].all_crawls_lengths().to_html(
         index=False, classes="table-sm table-bordered table-hover table-striped")
     return flask.render_template('rawtext_or_html.html', html=table)
 
