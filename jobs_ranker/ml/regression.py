@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer
 
-from jobs_ranker import common
+from jobs_ranker.config import common
 from jobs_ranker.utils.instrumentation import LogCallsTimeAndOutput
 from jobs_ranker.utils.logger import logger
 

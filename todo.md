@@ -1,4 +1,6 @@
 - eng:
+    - add row to google-doc (when labeled)
+    - auto ngrok and email url / reverse ssh?
     - baseline rankers:
         - scrape order
         - keyword

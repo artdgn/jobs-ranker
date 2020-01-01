@@ -1,13 +1,13 @@
 import flask
 
-from jobs_ranker.tasks.configs import TasksConfigsDao
-from jobs_ranker.ui.webapp.task_sessions import TasksSessions
+from jobs_ranker.tasks import configs
+from jobs_ranker.webapp import task_sessions
 from jobs_ranker.utils.logger import logger, log_path
 
 app = flask.Flask(__name__)
 app.secret_key = b'secret'
 
-tasks = TasksSessions()
+tasks = task_sessions.TasksSessions()
 
 
 @app.route('/')
@@ -20,7 +20,7 @@ def home():
 @app.route('/tasks/')
 def tasks_list():
     return flask.render_template('tasks_list.html',
-                                 task_names=TasksConfigsDao.all_names())
+                                 task_names=configs.TasksConfigsDao.all_names())
 
 
 @app.errorhandler(404)
@@ -85,7 +85,7 @@ def new_task():
         form = flask.request.form
         name = form.get('name')
         try:
-            TasksConfigsDao.new_task(name)
+            configs.TasksConfigsDao.new_task(name)
             return flask.redirect(flask.url_for('edit_task', task_name=name))
         except ValueError as e:
             flask.flash(str(e), 'danger')

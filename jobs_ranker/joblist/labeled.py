@@ -3,7 +3,7 @@ import os
 
 import pandas as pd
 
-from jobs_ranker.common import LABELED_ROOT_DIR
+from jobs_ranker.config.common import LABELED_ROOT_DIR
 from jobs_ranker.utils.instrumentation import LogCallsTimeAndOutput
 from jobs_ranker.utils.logger import logger
 

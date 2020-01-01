@@ -5,7 +5,7 @@ import subprocess
 import pandas as pd
 import pandas.errors
 
-from jobs_ranker import common
+from jobs_ranker.config import common
 from jobs_ranker.tasks.configs import TaskConfig
 from jobs_ranker.utils.logger import logger
 

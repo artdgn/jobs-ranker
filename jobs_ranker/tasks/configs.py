@@ -1,7 +1,7 @@
 import json
 import os
 
-from jobs_ranker import common
+from jobs_ranker.config import common
 
 
 class TaskConfig(dict):

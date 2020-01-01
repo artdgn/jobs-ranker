@@ -4,6 +4,7 @@ PYTHON=.venv/bin/python3
 DOCKER_TAG=artdgn/$(REPO_NAME)
 DOCKER_DATA_ARG=-v $(realpath ./data):/app/data
 DOCKER_TIME_ARG=-e TZ=$(shell cat /etc/timezone)
+PORT=5000
 
 .venv:
 	python3.6 -m venv .venv
@@ -13,7 +14,7 @@ requirements.txt: .venv
 	pip install -U pip pip-tools; \
 	pip-compile requirements.in
 
-install: .venv requirements.txt
+install: .venv
 	$(VENV_ACTIVATE); \
 	pip install -r requirements.txt
 
@@ -22,9 +23,9 @@ python:
 
 server: .venv
 	$(VENV_ACTIVATE); \
-	python server.py
+	python jobs_ranker/server.py
 
-build-docker: requirements.txt
+build-docker:
 	docker build -t $(DOCKER_TAG) .
 
 push-docker: build-docker
@@ -34,7 +35,7 @@ docker-bash: build-docker
 	docker run --rm -it \
 	$(DOCKER_DATA_ARG) \
 	$(DOCKER_TIME_ARG) \
-	--network="host" \
+	-p $(PORT):$(PORT) \
 	--name $(REPO_NAME) \
 	$(DOCKER_TAG) bash
 
@@ -43,9 +44,9 @@ docker-server: build-docker
 	$(DOCKER_DATA_ARG) \
 	$(DOCKER_TIME_ARG) \
 	--name $(REPO_NAME) \
-	--network="host" \
+	-p $(PORT):$(PORT) \
 	--restart unless-stopped \
-	$(DOCKER_TAG) python server.py
+	$(DOCKER_TAG) python jobs_ranker/server.py
 
 docker-server-update:
 	docker rm -f $(REPO_NAME) || sleep 1
@@ -56,3 +57,11 @@ docker-server-logs:
 
 chown-dirs:
 	sudo chown $(shell id -u):$(shell id -u) -R .
+
+ngrok:
+	$(HOME)/ngrok/ngrok http $(PORT) > /dev/null &
+
+ngrok-tunnel:
+	curl -s localhost:4040/api/tunnels \
+	| jq '.tunnels[].public_url | select(contains("https"))' \
+	| tr -d '"'

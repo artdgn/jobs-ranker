@@ -8,7 +8,7 @@ from threading import Lock
 import numpy
 import pandas as pd
 
-from jobs_ranker import common
+from jobs_ranker.config import common
 from jobs_ranker.joblist.labeled import LabeledJobs, LabelsAPI
 from jobs_ranker.ml import regression
 from jobs_ranker.ml.deduplication import calc_duplicates

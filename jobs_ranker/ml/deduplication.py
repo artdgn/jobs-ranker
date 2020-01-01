@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from jobs_ranker import common
+from jobs_ranker.config import common
 from jobs_ranker.utils.instrumentation import log_time_and_shape
 
 
