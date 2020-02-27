@@ -23,7 +23,7 @@ python:
 
 server: .venv
 	$(VENV_ACTIVATE); \
-	python jobs_ranker/server.py
+	python server.py
 
 build-docker:
 	docker build -t $(DOCKER_TAG) .
@@ -46,11 +46,11 @@ docker-server: build-docker
 	--name $(REPO_NAME) \
 	-p $(PORT):$(PORT) \
 	--restart unless-stopped \
-	$(DOCKER_TAG) python jobs_ranker/server.py
+	$(DOCKER_TAG) python server.py
 
 docker-server-update:
 	docker rm -f $(REPO_NAME) || sleep 1
-	make docker-server
+	$(MAKE) docker-server
 
 docker-server-logs:
 	docker logs $(REPO_NAME) -f

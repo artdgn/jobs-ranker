@@ -206,8 +206,11 @@ class RFPipeline(RegPipelineBase):
                                        target_name=target_name, baselines=baselines)
 
 
-class LGBPipeline(RegPipelineBase):
+class LGBRegressionPipeline(RegPipelineBase):
+    objective = 'regression'
+
     class LGBMRegEarlyStop(LGBMRegressor):
+        eval_metric = 'l2'
 
         def fit(self, X, y, early_stopping=False):
             if early_stopping:
@@ -216,7 +219,7 @@ class LGBPipeline(RegPipelineBase):
                     shuffle=common.MLParams.shuffle_split)
 
                 LGBMRegressor.fit(self, x_train, y_train,
-                                  eval_metric='l2',
+                                  eval_metric=self.eval_metric,
                                   early_stopping_rounds=200,
                                   eval_set=(x_valid, y_valid),
                                   verbose=False)
@@ -226,11 +229,13 @@ class LGBPipeline(RegPipelineBase):
                 self.n_estimators = self.best_iteration_
             return LGBMRegressor.fit(self, X, y)
 
-    @staticmethod
-    def _reg():
-        return LGBPipeline.LGBMRegEarlyStop(
+    @classmethod
+    def _reg(cls):
+        return LGBRegressionPipeline.LGBMRegEarlyStop(
             n_estimators=common.MLParams.lgbm_max_n_estimators,
-            learning_rate=common.MLParams.lgbm_learning_rate)
+            learning_rate=common.MLParams.lgbm_learning_rate,
+            objective=cls.objective
+        )
 
     def _train_eval(self, x, y, test_ratio, target_name='', baselines=()):
         x_train, x_test, y_train, y_test, _, test_mask = train_test_split(
@@ -241,6 +246,10 @@ class LGBPipeline(RegPipelineBase):
         y_pred = self.predict(x_test)
         metrics = self.print_metrics(y_test, y_pred, target_name=target_name)
         return metrics, self._score_baselines(baselines, test_mask, y_test)
+
+
+class LGBProbaRegressionPipeline(LGBRegressionPipeline):
+    objective = 'binary'
 
 
 def binary_scores(y, y_pred):

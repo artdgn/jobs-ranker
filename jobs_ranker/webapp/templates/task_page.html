@@ -26,8 +26,19 @@
         <ul class="nav nav-justified">
 
             <li class="nav-item">
-                <a class="nav-link btn btn-secondary mx-sm-1"
-                   href="{{ url_for('reload_ranker', task_name=task_name) }}">Reload and recalc</a>
+                <div class="dropdown">
+                    <a class="nav-link btn btn-secondary dropdown-toggle mx-sm-1" type="button"
+                       id="recalcDrop" data-toggle="dropdown" aria-haspopup="true"
+                       aria-expanded="false">Recalc</a>
+                    <div class="dropdown-menu" aria-labelledby="recalcDrop">
+                        <a class="dropdown-item"
+                           href="{{ url_for('recalc', task_name=task_name) }}"
+                           target="_blank">Recalc rankings</a>
+                        <a class="dropdown-item"
+                           href="{{ url_for('reload_ranker', task_name=task_name) }}"
+                           target="_blank">Reload data and recalc</a>
+                    </div>
+                </div>
             </li>
 
             <li class="nav-item">

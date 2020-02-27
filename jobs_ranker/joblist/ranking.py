@@ -355,7 +355,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         logger.info(f'training with {len(df_train)} salaries')
 
         if len(df_train) >= common.MLParams.min_training_samples:
-            self.regressor_salary = regression.LGBPipeline(
+            self.regressor_salary = regression.LGBRegressionPipeline(
                 text_cols=self.text_cols, num_cols=self.num_cols_salary)
             model_metrics, _ = self.regressor_salary.train_eval(
                 df_train, y_col=target_col, target_name='salary')
@@ -407,7 +407,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         if len(df_train) >= common.MLParams.min_training_samples:
             df_train = self._add_relevance_features(df_train)
 
-            self.regressor = regression.LGBPipeline(
+            self.regressor = regression.LGBProbaRegressionPipeline(
                 text_cols=self.text_cols, num_cols=self.num_cols_label)
 
             model_metrics, baselines_metrics = self.regressor.train_eval(

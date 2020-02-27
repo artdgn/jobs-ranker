@@ -173,9 +173,6 @@ def label_url_post(task_name, url):
     if 'skip' in form:
         return flask.redirect(flask.url_for('skip_url', task_name=task_name, url=url))
 
-    if 'recalc' in form:
-        return flask.redirect(flask.url_for('recalc', task_name=task_name))
-
     if 'numeric' in form:
         resp = form['label']
     elif 'no' in form:

@@ -11,34 +11,41 @@
 <li class="breadcrumb-item active" aria-current="page"> Label</li>
 {% endblock %}
 {% block content %}
-<div class="sticky-top bg-white py-2 my-2">
-    <h4>Job Page: <a id="job_link" class="py-3 my-3"
-                     href="{{ job_url }}" target="_blank">{{ job_url }}</a></h4>
+<div class="sticky-top bg-white py-2 my-2 col-auto">
+    <form method="post" class="form-row btn-group">
 
-    <form method="post" class="form-inline">
-        <h4 class="form-group my-2 mx-sm-1">Relevance: </h4>
+        <a id="job_link" class="form-group my-2 mx-sm-2 btn btn-primary"
+           data-toggle="tooltip" title="{{job_url}}" href="{{ job_url }}"
+           target="_blank"> Job Page </a>
+
         <div class="form-group my-2 mx-sm-1">
-            <input type=submit name=no value="Irrelevant" class="btn btn-outline-danger btn-primary btn-lg">
+            <input type=submit name=no value="Irrelevant"
+                   class="btn btn-outline-danger">
         </div>
+
         <div class="form-group my-2 mx-sm-1">
-            <input type=submit name=somewhat value="So-so.." class="btn btn-outline-info btn-primary btn-lg">
+            <input type=submit name=somewhat value="So-so.."
+                   class="btn btn-outline-info">
         </div>
+
         <div class="form-group my-2 mx-sm-1">
-            <input type=submit name=yes value="Relevant" class="btn btn-outline-success btn-primary btn-lg">
+            <input type=submit name=yes value="Relevant"
+                   class="btn btn-outline-success">
         </div>
-        <div class="form-group my-2 mx-sm-1">
-            <input type=text class="form-control-lg" name=label
-                   id="textField" autofocus autocomplete="off" placeholder="..or number between 0 and 1">
+
+        <div class="form-group col-2 my-2 mx-sm-1">
+            <input type=text class="form-control" name=label
+                   id="textField" autofocus autocomplete="off"
+                   placeholder=".. score">
         </div>
+
         <div class="form-group my-2 mx-sm-1">
             <input type=submit name=numeric id="labelButton" value=Label
-                   class="btn btn-outline-info btn-primary btn-lg">
+                   class="btn btn-outline-info">
         </div>
+
         <div class="form-group my-2 mx-sm-1">
             <input type=submit name=skip value="Skip" class="btn btn-link">
-        </div>
-        <div class="form-group my-2 mx-sm-1">
-            <input type=submit name=recalc value="Recalc" class="btn btn-link">
         </div>
     </form>
 </div>

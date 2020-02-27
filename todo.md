@@ -1,26 +1,20 @@
 - eng:
+    - add disk caching for feature building
     - add row to google-doc (when labeled)
     - auto ngrok and email url / reverse ssh?
-    - baseline rankers:
-        - scrape order
-        - keyword
-    - auto-stuff:
-        - auto scrape / ask when newest is 1 day old
+    - auto-stuff / no waiting for scraping to finish:
         - auto recalc when 10 labels added
         - only retrain salaries when 10% salaries added
         - label new while scraping (append to last full one)  
         - auto reload when scraping is in progress and 10 more jobs were added 
         - scraping prog banner
-        
-    - browser extension frontend
     
     - add jokes: popups for labeling, waiting gifs
     - remove unused options and params
-    - distinct relevance categories and definitions (with popups)
+    - distinct relevance categories and definitions (with tooltips)
     - webapp: 
         - optional parameters (dedup, cache, ..) - remove or add to task-config
     - display closest labeled dup for each + simil score + label
-    - choice of sort order (model / keywords / scrape-order)
     - refactor dups
     - tests        
     
