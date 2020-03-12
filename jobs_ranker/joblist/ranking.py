@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from itertools import product
 from threading import Lock
 
-import numpy
+import numpy as np
 import pandas as pd
 
 from jobs_ranker.config import common
@@ -264,17 +264,18 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
         return next(self._unlabeled, None)
 
     def _sort_jobs(self, df):
-        sort_cols = [self.model_score_col,
+        sort_cols = [self.scrape_order_rank_col,
                      self.keyword_score_col,
-                     self.scrape_order_rank_col]
-        scores = [self.model_score,
+                     self.model_score_col]
+        scores = [self.scrape_order_score,
                   self.keyword_score,
-                  self.scrape_order_score]
+                  self.model_score]
 
-        if not any(scores):
-            return df  # didn't train
-
-        self.sort_col = sort_cols[int(numpy.nanargmax(scores))]
+        if not any(scores):  # didn't train, choose default
+            self.sort_col = (self.keyword_score_col if self.task_config.has_keywords()
+                             else self.scrape_order_rank_col)
+        else:
+            self.sort_col = sort_cols[int(np.nanargmax(scores))]
 
         logger.info(f'Sorting by column: {self.sort_col} ({self.ranking_scores})')
         df.sort_values(self.sort_col, ascending=False, inplace=True)
@@ -282,9 +283,10 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
 
     @property
     def ranking_scores(self):
-        return (f'model-score = {self.model_score:.2f}, '
-                f'keyword-score = {self.keyword_score:.2f}, '
-                f'scrape-order-score = {self.scrape_order_score:.2f}')
+        none_to_nan = lambda arg: arg if arg is not None else np.nan
+        return (f'model-score = {none_to_nan(self.model_score):.2f}, ' 
+                f'keyword-score = {none_to_nan(self.keyword_score):.2f}, ' 
+                f'scrape-order-score = {none_to_nan(self.scrape_order_score):.2f}')
 
     @classmethod
     def _extract_numeric_fields(cls, df):
@@ -312,7 +314,7 @@ class JobsRanker(RankerAPI, LogCallsTimeAndOutput):
             keywords = self.task_config[group_kind]
             group_regex = re.compile(group_named_regex(keywords, group_kind))
 
-            df[group_hits] = df[source].apply(lambda s: numpy.unique(re.findall(group_regex, s)))
+            df[group_hits] = df[source].apply(lambda s: np.unique(re.findall(group_regex, s)))
             # df[group_hits] = df[source].str.extractall(group_regex).groupby(level=0).agg(set)  # alternative impl
             df[group_col] = df[source].str.count(group_regex)
 

@@ -6,6 +6,9 @@ from jobs_ranker.config import common
 
 class TaskConfig(dict):
 
+    KEYWORD_KEYS = ['title_positive', 'title_negative',
+                    'description_positive', 'description_negative']
+
     @classmethod
     def from_dict(cls, name, path, **kwargs):
         return cls(_name=name, _path=path, **kwargs)
@@ -50,6 +53,9 @@ class TaskConfig(dict):
         copy.pop('_name')
         copy.pop('_path')
         return copy
+
+    def has_keywords(self):
+        return any(k in self for k in self.KEYWORD_KEYS)
 
     def __str__(self):
         return json.dumps(self.data_dict(), indent=2)
