@@ -16,6 +16,8 @@ Automation and basic ML can help reduce the job-ad reading and mental fatigue to
 3. Open http://localhost:5000/ in browser.
 4. Create and edit a task, then scrape it, then view and label jobs.
 
+![basic-flow-gif](https://user-images.githubusercontent.com/29574203/79126169-c9350f00-7de2-11ea-9b9e-21a4e1430e93.gif)
+
 # Installation: more details / other options:
 
 ### Docker (downloaded image):
@@ -32,7 +34,7 @@ Automation and basic ML can help reduce the job-ad reading and mental fatigue to
 # Usage
 
 ## Webapp:
-This will run a local website through which the application is used. 
+This will run a local website through which the application is used.
 1. Run: 
     - Docker: To run server in background `docker run -dit 
     -v $(realpath ~/jobs_data):/data -e TZ=$(cat /etc/timezone) --name jobs-ranker 
